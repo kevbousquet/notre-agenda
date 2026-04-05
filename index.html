@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#D4788A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Notre Agenda">
+<meta name="description" content="Agenda partagé en temps réel pour les couples">
+<link rel="manifest" href="/notre-agenda/manifest.json">
+<link rel="apple-touch-icon" href="/notre-agenda/icons/icon-192.png">
+<title>Notre Agenda 💑</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --rose: #D4788A; --rose-light: #F7E8EC; --rose-dark: #A84F61;
+  --sage: #7A9E8E; --sage-light: #EAF2EE;
+  --cream: #FBF8F4; --charcoal: #2C2B2B; --muted: #8A8580;
+  --white: #FFFFFF; --border: rgba(44,43,43,0.1);
+  --shadow: 0 4px 24px rgba(44,43,43,0.08);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--charcoal); display: flex; flex-direction: column; }
+
+/* ── SETUP ── */
+#setup {
+  position: fixed; inset: 0; z-index: 999;
+  background: linear-gradient(160deg, var(--rose-light) 0%, var(--cream) 55%, var(--sage-light) 100%);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem; padding-top: calc(1.5rem + var(--safe-top));
+  overflow-y: auto;
+}
+.setup-card {
+  background: white; border-radius: 28px; padding: 2.25rem 1.75rem;
+  max-width: 400px; width: 100%; text-align: center;
+  box-shadow: 0 8px 40px rgba(44,43,43,0.12);
+}
+.setup-card h1 { font-family: 'Playfair Display', serif; font-size: 1.75rem; color: var(--rose-dark); margin: .5rem 0 .4rem; }
+.setup-card > p { color: var(--muted); font-size: .85rem; margin-bottom: 1.75rem; line-height: 1.5; }
+.field { margin-bottom: 1rem; text-align: left; }
+.field label { display: block; font-size: .7rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .4rem; }
+.field input { width: 100%; padding: .75rem 1rem; border: 1.5px solid var(--border); border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 1rem; background: var(--cream); color: var(--charcoal); outline: none; transition: border-color .2s; }
+.field input:focus { border-color: var(--rose); }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.firebase-box { background: #FFF8F0; border: 1.5px solid rgba(245,166,35,.5); border-radius: 16px; padding: 1.1rem; margin-bottom: 1rem; text-align: left; }
+.firebase-box h3 { font-size: .8rem; font-weight: 500; color: #9A6500; margin-bottom: .4rem; }
+.firebase-box p { font-size: .75rem; color: #7A5000; line-height: 1.4; margin-bottom: .6rem; }
+.firebase-box a { font-size: .72rem; color: #9A6500; display: block; margin-top: .5rem; }
+.btn { display: block; width: 100%; padding: 1rem; border: none; border-radius: 16px; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all .2s; }
+.btn-primary { background: var(--rose); color: white; }
+.btn-primary:hover { background: var(--rose-dark); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-demo { background: var(--sage-light); color: var(--sage); border: 1.5px solid var(--sage); margin-bottom: .75rem; font-size: .9rem; padding: .8rem; border-radius: 14px; }
+.btn-demo:hover { background: var(--sage); color: white; }
+
+/* ── HEADER ── */
+.app-header {
+  background: white; border-bottom: 1px solid var(--border);
+  padding: .85rem 1.25rem;
+  padding-top: calc(.85rem + var(--safe-top));
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; z-index: 50;
+}
+.app-header h1 { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--rose-dark); }
+.hdr-right { display: flex; gap: .5rem; align-items: center; }
+.sync-pill { display: flex; align-items: center; gap: .35rem; font-size: .68rem; color: var(--sage); padding: .28rem .65rem; background: var(--sage-light); border-radius: 20px; }
+.sync-dot { width: 5px; height: 5px; background: var(--sage); border-radius: 50%; animation: pulse 2s infinite; }
+.sync-pill.off { color: #c94a4a; background: #fdf0f0; }
+.sync-pill.off .sync-dot { background: #c94a4a; animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--cream); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .9rem; position: relative; }
+.icon-btn:active { background: var(--rose-light); border-color: var(--rose); }
+.badge { position: absolute; top: -5px; right: -5px; background: var(--rose); color: white; font-size: 9px; font-weight: 700; min-width: 15px; height: 15px; border-radius: 10px; display: none; align-items: center; justify-content: center; border: 2px solid white; padding: 0 2px; }
+.add-btn { padding: .5rem .95rem; background: var(--rose); color: white; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: .85rem; font-weight: 500; cursor: pointer; }
+.add-btn:active { background: var(--rose-dark); transform: scale(0.97); }
+
+/* ── CODE BAR ── */
+.code-bar { background: var(--sage-light); padding: .3rem 1.25rem; font-size: .68rem; color: var(--sage); text-align: center; flex-shrink: 0; }
+
+/* ── SCROLL BODY ── */
+#main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(1rem + var(--safe-bottom)); }
+
+/* ── TODAY BANNER ── */
+.today-banner { margin: 1rem 1rem .75rem; background: white; border-radius: 18px; padding: 1rem 1.25rem; box-shadow: var(--shadow); }
+.today-banner h2 { font-size: .68rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .5rem; }
+.today-ev { font-size: .85rem; color: var(--charcoal); margin-bottom: .25rem; display: flex; align-items: center; gap: .4rem; }
+.today-empty { font-size: .85rem; color: var(--muted); font-style: italic; }
+
+/* ── CALENDAR ── */
+.cal-wrap { margin: 0 1rem .75rem; background: white; border-radius: 18px; padding: 1.1rem; box-shadow: var(--shadow); }
+.cal-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: .9rem; }
+.cal-nav { width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid var(--border); background: none; cursor: pointer; font-size: .85rem; display: flex; align-items: center; justify-content: center; }
+.cal-nav:active { background: var(--rose-light); border-color: var(--rose); }
+.cal-month { font-family: 'Playfair Display', serif; font-size: .95rem; font-weight: 600; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; text-align: center; }
+.cal-dow { font-size: .6rem; font-weight: 500; color: var(--muted); text-transform: uppercase; padding: 2px 0 7px; letter-spacing: .04em; }
+.cal-day { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: .8rem; cursor: pointer; position: relative; user-select: none; -webkit-user-select: none; transition: background .15s; }
+.cal-day:active:not(.empty) { background: var(--rose-light); }
+.cal-day.today { background: var(--rose); color: white; font-weight: 600; }
+.cal-day.selected:not(.today) { background: var(--sage-light); color: var(--sage); font-weight: 600; }
+.cal-day.has-event::after { content:''; position: absolute; bottom: 2px; width: 4px; height: 4px; border-radius: 50%; background: var(--rose); }
+.cal-day.today.has-event::after { background: rgba(255,255,255,.7); }
+.cal-day.other-m { color: var(--muted); opacity: .35; }
+
+/* ── EVENTS ── */
+.events-wrap { margin: 0 1rem; }
+.events-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin-bottom: .75rem; }
+.ev-card { background: white; border-radius: 14px; padding: .9rem 1rem; box-shadow: 0 2px 10px rgba(44,43,43,.06); border-left: 4px solid var(--rose); display: flex; gap: .8rem; align-items: flex-start; margin-bottom: .6rem; }
+.ev-card.partner { border-left-color: var(--sage); }
+.ev-time { font-size: .72rem; font-weight: 500; color: var(--muted); white-space: nowrap; min-width: 45px; padding-top: 2px; }
+.ev-body { flex: 1; }
+.ev-title { font-size: .9rem; font-weight: 500; margin-bottom: .2rem; }
+.ev-meta { font-size: .73rem; color: var(--muted); display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.adot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 2px; vertical-align: middle; }
+.ev-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .85rem; padding: 4px; border-radius: 6px; opacity: .45; }
+.ev-del:active { opacity: 1; color: #c94a4a; }
+.no-ev { background: var(--sage-light); border-radius: 14px; padding: 1.5rem; text-align: center; }
+.no-ev p { color: var(--sage); font-size: .88rem; line-height: 1.5; }
+
+/* ── MODAL ── */
+.modal-bg { position: fixed; inset: 0; background: rgba(44,43,43,.5); backdrop-filter: blur(6px); display: none; align-items: flex-end; justify-content: center; z-index: 200; }
+.modal-bg.open { display: flex; }
+.modal { background: white; border-radius: 28px 28px 0 0; padding: 1.75rem 1.5rem; width: 100%; max-width: 500px; padding-bottom: calc(1.75rem + var(--safe-bottom)); max-height: 90vh; overflow-y: auto; }
+.modal h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 1.25rem; }
+.mfield { margin-bottom: .85rem; }
+.mfield label { display: block; font-size: .68rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .35rem; }
+.mfield input, .mfield select, .mfield textarea { width: 100%; padding: .7rem .9rem; border: 1.5px solid var(--border); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--charcoal); background: var(--cream); outline: none; -webkit-appearance: none; }
+.mfield input:focus, .mfield select:focus, .mfield textarea:focus { border-color: var(--rose); }
+.mrow { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.mactions { display: flex; gap: .6rem; margin-top: 1.25rem; }
+.m-cancel { flex: 1; padding: .8rem; background: none; border: 1.5px solid var(--border); border-radius: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--muted); font-size: .9rem; }
+.m-save { flex: 2; padding: .8rem; background: var(--rose); border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: .95rem; font-weight: 500; color: white; cursor: pointer; }
+.m-save:active { background: var(--rose-dark); }
+
+/* ── NOTIF PANEL ── */
+.notif-bg { position: fixed; inset: 0; background: rgba(44,43,43,.4); backdrop-filter: blur(4px); display: none; z-index: 150; }
+.notif-bg.open { display: block; }
+.notif-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(300px,85vw); background: white; box-shadow: -4px 0 24px rgba(44,43,43,.12); z-index: 151; overflow-y: auto; padding-top: var(--safe-top); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .3s ease; }
+.notif-panel.open { transform: translateX(0); }
+.notif-head { padding: 1.25rem 1.1rem .85rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.notif-head h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; }
+.n-clear { font-size: .75rem; color: var(--rose); background: none; border: none; cursor: pointer; }
+.n-item { padding: .8rem 1.1rem; border-bottom: 1px solid var(--border); display: flex; gap: .65rem; }
+.n-icon { font-size: 1rem; flex-shrink: 0; }
+.n-text p { font-size: .8rem; color: var(--charcoal); line-height: 1.4; }
+.n-text span { font-size: .7rem; color: var(--muted); }
+.n-empty { padding: 2rem; text-align: center; color: var(--muted); font-size: .85rem; }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: calc(1.5rem + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(80px); background: var(--charcoal); color: white; padding: .75rem 1.25rem; border-radius: 14px; font-size: .85rem; transition: transform .3s; z-index: 300; white-space: nowrap; max-width: calc(100vw - 2rem); overflow: hidden; text-overflow: ellipsis; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── INSTALL BANNER ── */
+.install-banner { position: fixed; bottom: calc(5rem + var(--safe-bottom)); left: 1rem; right: 1rem; background: white; border-radius: 18px; padding: 1rem 1.25rem; box-shadow: 0 8px 32px rgba(44,43,43,.15); display: none; align-items: center; gap: 1rem; z-index: 100; border: 1.5px solid var(--rose-light); }
+.install-banner.show { display: flex; }
+.install-banner p { flex: 1; font-size: .82rem; color: var(--charcoal); line-height: 1.4; }
+.install-banner button { padding: .6rem 1rem; background: var(--rose); color: white; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.install-dismiss { background: none; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; padding: 4px; }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="setup-card">
+    <div style="font-size:2.5rem">💑</div>
+    <h1>Notre Agenda</h1>
+    <p>Agenda partagé en temps réel, comme une vraie app sur votre téléphone.</p>
+
+    <div class="two-col" style="margin-bottom:1rem">
+      <div class="field" style="margin-bottom:0">
+        <label>Votre prénom</label>
+        <input type="text" id="n1" placeholder="Thomas" autocomplete="given-name">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Prénom de votre femme</label>
+        <input type="text" id="n2" placeholder="Léa" autocomplete="given-name">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Code partagé (même code sur les deux téléphones)</label>
+      <div style="display:flex;gap:.5rem">
+        <input type="text" id="code" placeholder="Ex: famille2025" style="flex:1">
+        <button onclick="genCode()" style="padding:.7rem .9rem;background:var(--sage-light);border:1.5px solid var(--sage);border-radius:12px;cursor:pointer;font-size:.8rem;color:var(--sage);white-space:nowrap;font-family:'DM Sans',sans-serif">🔀</button>
+      </div>
+    </div>
+
+    <div class="firebase-box">
+      <h3>🔥 Synchro Firebase Realtime</h3>
+      <p>Collez l'URL de votre base de données Firebase pour une vraie synchronisation entre vos deux téléphones :</p>
+      <input type="url" id="fburl" placeholder="https://mon-projet-rtdb.firebaseio.com" style="width:100%;padding:.6rem .8rem;border:1.5px solid rgba(245,166,35,.4);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.82rem;background:white;color:var(--charcoal);outline:none;margin-bottom:.2rem">
+      <a href="https://console.firebase.google.com" target="_blank">→ Créer gratuitement sur firebase.google.com (2 min)</a>
+    </div>
+
+    <button class="btn btn-demo" onclick="startDemo()">✨ Mode démo — essayer maintenant</button>
+    <button class="btn btn-primary" onclick="startApp(false)">Connecter & commencer →</button>
+    <p style="margin-top:.85rem;font-size:.73rem;color:var(--muted);line-height:1.5">Votre femme installe la même app sur son téléphone, entre les mêmes prénoms, le même code et la même URL Firebase.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<header class="app-header" id="hdr" style="display:none">
+  <h1 id="app-title">💑 Notre Agenda</h1>
+  <div class="hdr-right">
+    <div class="sync-pill" id="sync-pill"><span class="sync-dot"></span><span id="sync-lbl">En ligne</span></div>
+    <button class="icon-btn" id="notif-btn" onclick="toggleNotif()">🔔<span class="badge" id="badge"></span></button>
+    <button class="add-btn" onclick="openModal()">+ Ajouter</button>
+  </div>
+</header>
+<div class="code-bar" id="code-bar" style="display:none">Code partagé : <strong id="code-lbl"></strong></div>
+
+<div id="main" style="display:none">
+  <div class="today-banner">
+    <h2>Aujourd'hui</h2>
+    <div id="today-strip"></div>
+  </div>
+
+  <div class="cal-wrap">
+    <div class="cal-hdr">
+      <button class="cal-nav" onclick="chMonth(-1)">&#8592;</button>
+      <span class="cal-month" id="cal-month"></span>
+      <button class="cal-nav" onclick="chMonth(1)">&#8594;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid">
+      <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">M</div>
+      <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div><div class="cal-dow">D</div>
+    </div>
+  </div>
+
+  <div class="events-wrap">
+    <div class="events-title" id="ev-title-date">Sélectionnez une date</div>
+    <div id="ev-list"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2>Nouvel événement</h2>
+    <div class="mfield"><label>Titre</label><input type="text" id="ev-t" placeholder="Ex: Dîner chez les parents"></div>
+    <div class="mrow">
+      <div class="mfield"><label>Date</label><input type="date" id="ev-d"></div>
+      <div class="mfield"><label>Heure</label><input type="time" id="ev-h"></div>
+    </div>
+    <div class="mfield">
+      <label>Catégorie</label>
+      <select id="ev-c">
+        <option value="famille">👨‍👩‍👧 Famille</option>
+        <option value="loisir">🎭 Loisir</option>
+        <option value="sante">🏥 Santé</option>
+        <option value="travail">💼 Travail</option>
+        <option value="autre">📌 Autre</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Note (optionnel)</label><textarea id="ev-n" rows="2" placeholder="Détails..."></textarea></div>
+    <div class="mactions">
+      <button class="m-cancel" onclick="closeModal()">Annuler</button>
+      <button class="m-save" onclick="saveEvent()">Enregistrer 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIF PANEL -->
+<div class="notif-bg" id="notif-bg" onclick="closeNotif()"></div>
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-head">
+    <h3>Notifications</h3>
+    <button class="n-clear" onclick="clearNotifs()">Tout effacer</button>
+  </div>
+  <div id="n-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- INSTALL BANNER -->
+<div class="install-banner" id="install-banner">
+  <p>📱 <strong>Installer l'app</strong> sur votre écran d'accueil pour l'utiliser comme une vraie application.</p>
+  <button id="install-btn">Installer</button>
+  <button class="install-dismiss" onclick="dismissInstall()">✕</button>
+</div>
+
+<script>
+const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const CE={famille:'👨‍👩‍👧',loisir:'🎭',sante:'🏥',travail:'💼',autre:'📌'};
+const CL={famille:'Famille',loisir:'Loisir',sante:'Santé',travail:'Travail',autre:'Autre'};
+
+let G={n1:'',n2:'',code:'',fbUrl:'',events:[],notifs:[],mo:new Date().getMonth(),yr:new Date().getFullYear(),sel:null,demo:false};
+let fbTimer=null, deferredPrompt=null;
+
+// ── PWA INSTALL ──
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click',async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const r=await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+function dismissInstall(){document.getElementById('install-banner').classList.remove('show');}
+
+// ── SETUP ──
+function genCode(){
+  const ws=['coeur','soleil','bonheur','famille','amour','ensemble'];
+  document.getElementById('code').value=ws[Math.floor(Math.random()*ws.length)]+Math.floor(1000+Math.random()*9000);
+}
+function startDemo(){G.demo=true;document.getElementById('n1').value=document.getElementById('n1').value||'Thomas';document.getElementById('n2').value=document.getElementById('n2').value||'Léa';document.getElementById('code').value=document.getElementById('code').value||'demo2025';startApp(true);}
+function startApp(demo=false){
+  G.demo=demo;
+  G.n1=document.getElementById('n1').value.trim()||'Moi';
+  G.n2=document.getElementById('n2').value.trim()||'Mon amour';
+  G.code=document.getElementById('code').value.trim()||genCode()||'couple';
+  G.fbUrl=document.getElementById('fburl').value.trim().replace(/\/$/,'');
+  localStorage.setItem('ag_config',JSON.stringify({n1:G.n1,n2:G.n2,code:G.code,fbUrl:G.fbUrl}));
+  boot();
+}
+
+function boot(){
+  document.getElementById('setup').style.display='none';
+  ['hdr','code-bar','main'].forEach(id=>document.getElementById(id).style.display=id==='main'?'block':'flex');
+  document.getElementById('app-title').textContent='💑 '+G.n1+' & '+G.n2;
+  document.getElementById('code-lbl').textContent=G.code;
+  loadLocal();
+  if(G.fbUrl&&!G.demo){startFb();}else{setSyncOff();}
+  addDailyNotif();
+  renderCal();
+  selDate(today());
+  updateBadge();
+  registerSW();
+}
+
+// ── AUTO LOGIN ──
+window.addEventListener('load',()=>{
+  const cfg=localStorage.getItem('ag_config');
+  if(cfg){try{const c=JSON.parse(cfg);G.n1=c.n1;G.n2=c.n2;G.code=c.code;G.fbUrl=c.fbUrl||'';boot();}catch(e){}}
+});
+
+// ── SERVICE WORKER ──
+function registerSW(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/notre-agenda/sw.js', {scope: '/notre-agenda/'}).catch(()=>{});
+  }
+}
+
+// ── FIREBASE ──
+function fbPath(){return`${G.fbUrl}/agenda/${G.code}`;}
+function startFb(){setSyncOn();fetchFb();fbTimer=setInterval(fetchFb,5000);}
+async function fetchFb(){
+  try{
+    const r=await fetch(`${fbPath()}.json`);
+    if(!r.ok)throw 0;
+    const data=await r.json();
+    const prevLen=G.events.length;
+    G.events=data&&data.events?Object.values(data.events):[];
+    if(G.events.length>prevLen&&prevLen>0){
+      const newest=G.events.sort((a,b)=>b.ts-a.ts)[0];
+      if(newest&&newest.authorName!==G.n1){
+        pushNotif('📅',`${newest.authorName} a ajouté "${newest.title}"${newest.date?' le '+fmtFR(newest.date):''}`, 'À l\'instant');
+        toast(`📅 ${newest.authorName} a ajouté "${newest.title}"`);
+        sendPushIfPermitted(`${newest.authorName} a ajouté "${newest.title}"`);
+      }
+    }
+    setSyncOn();renderCal();if(G.sel)selDate(G.sel);
+  }catch(e){setSyncOff();}
+}
+async function pushFb(ev){try{await fetch(`${fbPath()}/events/${ev.id}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ev)});setSyncOn();}catch(e){setSyncOff();}}
+async function delFb(id){try{await fetch(`${fbPath()}/events/${id}.json`,{method:'DELETE'});}catch(e){}}
+
+// ── LOCAL ──
+function saveLocal(){try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,notifs:G.notifs}));}catch(e){}}
+function loadLocal(){try{const d=JSON.parse(localStorage.getItem('ag_'+G.code)||'{}');G.events=d.events||[];G.notifs=d.notifs||[];}catch(e){G.events=[];G.notifs=[];}}
+
+// ── SYNC UI ──
+function setSyncOn(){const p=document.getElementById('sync-pill');p.className='sync-pill';document.getElementById('sync-lbl').textContent='Synchronisé';}
+function setSyncOff(){const p=document.getElementById('sync-pill');p.className='sync-pill off';document.getElementById('sync-lbl').textContent=G.demo?'Mode démo':'Hors ligne';}
+
+// ── DATE ──
+function today(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function fmtFR(ds){if(!ds)return'';const[y,m,d]=ds.split('-');return`${parseInt(d)}/${parseInt(m)}`;}
+
+// ── CALENDAR ──
+function renderCal(){
+  const grid=document.getElementById('cal-grid');
+  grid.querySelectorAll('.cal-day,.pad').forEach(e=>e.remove());
+  document.getElementById('cal-month').textContent=MONTHS[G.mo]+' '+G.yr;
+  const first=new Date(G.yr,G.mo,1);
+  let dow=first.getDay()-1;if(dow<0)dow=6;
+  const days=new Date(G.yr,G.mo+1,0).getDate();
+  const prev=new Date(G.yr,G.mo,0).getDate();
+  const td=today(); const evD=new Set(G.events.map(e=>e.date));
+  for(let i=0;i<dow;i++){const d=document.createElement('div');d.className='cal-day other-m pad';d.textContent=prev-dow+1+i;grid.appendChild(d);}
+  for(let day=1;day<=days;day++){
+    const ds=`${G.yr}-${String(G.mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const d=document.createElement('div');d.className='cal-day';
+    if(ds===td)d.classList.add('today');
+    if(ds===G.sel)d.classList.add('selected');
+    if(evD.has(ds))d.classList.add('has-event');
+    d.textContent=day;d.onclick=()=>selDate(ds);
+    grid.appendChild(d);
+  }
+  renderToday();
+}
+function renderToday(){
+  const evs=G.events.filter(e=>e.date===today()).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const el=document.getElementById('today-strip');
+  if(!evs.length){el.innerHTML=`<p class="today-empty">Rien de prévu — journée libre 🌸</p>`;return;}
+  el.innerHTML=evs.map(e=>`<div class="today-ev">${CE[e.cat]||'📌'} <strong>${e.title}</strong>${e.time?' · '+e.time:''}</div>`).join('');
+}
+function selDate(ds){
+  G.sel=ds;renderCal();
+  const[y,m,d]=ds.split('-');
+  const lbl=new Date(y,m-1,d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('ev-title-date').textContent=lbl.charAt(0).toUpperCase()+lbl.slice(1);
+  const evs=G.events.filter(e=>e.date===ds).sort((a,b)=>(a.time||'23:59').localeCompare(b.time||'23:59'));
+  const list=document.getElementById('ev-list');
+  if(!evs.length){list.innerHTML=`<div class="no-ev"><p>Aucun événement<br><span style="font-size:.8rem;opacity:.7">Appuyez sur "+ Ajouter" pour en créer un</span></p></div>`;return;}
+  list.innerHTML=evs.map(ev=>`
+    <div class="ev-card ${ev.authorName!==G.n1?'partner':''}">
+      <div class="ev-time">${ev.time||'Toute la journée'}</div>
+      <div class="ev-body">
+        <div class="ev-title">${CE[ev.cat]||'📌'} ${ev.title}</div>
+        <div class="ev-meta">
+          <span><span class="adot" style="background:${ev.authorName===G.n1?'var(--rose)':'var(--sage)'}"></span>${ev.authorName}</span>
+          <span>${CL[ev.cat]||'Autre'}</span>
+          ${ev.note?`<span>📝 ${ev.note}</span>`:''}
+        </div>
+      </div>
+      <button class="ev-del" onclick="delEvent('${ev.id}')">✕</button>
+    </div>`).join('');
+}
+function chMonth(d){G.mo+=d;if(G.mo>11){G.mo=0;G.yr++;}if(G.mo<0){G.mo=11;G.yr--;}renderCal();}
+
+// ── EVENTS ──
+function openModal(){document.getElementById('ev-d').value=G.sel||today();document.getElementById('modal-bg').classList.add('open');}
+function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
+async function saveEvent(){
+  const t=document.getElementById('ev-t').value.trim();
+  const d=document.getElementById('ev-d').value;
+  if(!t||!d){alert('Titre et date obligatoires');return;}
+  const ev={id:Date.now().toString(),title:t,date:d,time:document.getElementById('ev-h').value,cat:document.getElementById('ev-c').value,note:document.getElementById('ev-n').value.trim(),authorName:G.n1,ts:Date.now()};
+  G.events.push(ev);
+  pushNotif('📅',`${G.n1} a ajouté "${t}" le ${fmtFR(d)}`,'À l\'instant');
+  if(G.fbUrl&&!G.demo){await pushFb(ev);}else{saveLocal();}
+  closeModal();
+  ['ev-t','ev-h','ev-n'].forEach(id=>document.getElementById(id).value='');
+  renderCal();selDate(d);
+}
+async function delEvent(id){
+  G.events=G.events.filter(e=>e.id!==id);
+  if(G.fbUrl&&!G.demo){await delFb(id);}else{saveLocal();}
+  renderCal();if(G.sel)selDate(G.sel);
+}
+
+// ── NOTIFICATIONS ──
+function addDailyNotif(){
+  const t=today();
+  if(G.notifs.some(n=>n.type==='daily'&&n.date===t))return;
+  const evs=G.events.filter(e=>e.date===t);
+  const msg=evs.length===0?"Aucun événement aujourd'hui — profitez-en !":evs.length===1?`Aujourd'hui : ${evs[0].title}${evs[0].time?' à '+evs[0].time:''}`:`${evs.length} événements aujourd'hui. Bonne journée !`;
+  G.notifs.unshift({id:Date.now(),type:'daily',date:t,icon:'☀️',text:msg,time:'Ce matin',read:false});
+  saveLocal();
+}
+function pushNotif(icon,text,time){G.notifs.unshift({id:Date.now(),icon,text,time,read:false});updateBadge();saveLocal();}
+function updateBadge(){const n=G.notifs.filter(n=>!n.read).length;const b=document.getElementById('badge');b.textContent=n>9?'9+':n;b.style.display=n?'flex':'none';}
+function toggleNotif(){
+  const p=document.getElementById('notif-panel'),bg=document.getElementById('notif-bg');
+  const open=p.classList.contains('open');
+  p.classList.toggle('open');bg.classList.toggle('open');
+  if(!open){G.notifs.forEach(n=>n.read=true);updateBadge();renderNotifs();}
+}
+function closeNotif(){document.getElementById('notif-panel').classList.remove('open');document.getElementById('notif-bg').classList.remove('open');}
+function renderNotifs(){
+  const el=document.getElementById('n-list');
+  if(!G.notifs.length){el.innerHTML=`<div class="n-empty">Aucune notification</div>`;return;}
+  el.innerHTML=G.notifs.slice(0,30).map(n=>`<div class="n-item"><span class="n-icon">${n.icon}</span><div class="n-text"><p>${n.text}</p><span>${n.time}</span></div></div>`).join('');
+}
+function clearNotifs(){G.notifs=[];updateBadge();renderNotifs();saveLocal();}
+
+// ── PUSH NOTIFICATIONS ──
+async function sendPushIfPermitted(msg){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='granted'){new Notification('💑 Notre Agenda',{body:msg,icon:'/notre-agenda/icons/icon-192.png'});}
+  else if(Notification.permission==='default'){
+    const p=await Notification.requestPermission();
+    if(p==='granted')new Notification('💑 Notre Agenda',{body:msg,icon:'/notre-agenda/icons/icon-192.png'});
+  }
+}
+
+// ── TOAST ──
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+</script>
+</body>
+</html>

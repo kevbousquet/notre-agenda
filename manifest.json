@@ -1,0 +1,38 @@
+{
+  "name": "Notre Agenda 💑",
+  "short_name": "Notre Agenda",
+  "description": "Agenda partagé en temps réel pour les couples",
+  "start_url": "/notre-agenda/index.html",
+  "scope": "/notre-agenda/",
+  "display": "standalone",
+  "background_color": "#FBF8F4",
+  "theme_color": "#D4788A",
+  "orientation": "portrait",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/notre-agenda/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/notre-agenda/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/notre-agenda/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/notre-agenda/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
