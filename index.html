@@ -209,6 +209,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
   <div class="hdr-right">
     <div class="sync-pill" id="sync-pill"><span class="sync-dot"></span><span id="sync-lbl">En ligne</span></div>
     <button class="icon-btn" id="notif-btn" onclick="toggleNotif()">🔔<span class="badge" id="badge"></span></button>
+    <button class="icon-btn" onclick="logout()" style="font-size:.8rem" title="Paramètres">⚙️</button>
     <button class="add-btn" onclick="openModal()">+ Ajouter</button>
   </div>
 </header>
@@ -334,6 +335,14 @@ function boot(){
   selDate(today());
   updateBadge();
   registerSW();
+}
+
+// ── LOGOUT ──
+function logout(){
+  if(!confirm("Revenir à l'écran de configuration ?"))return;
+  localStorage.removeItem("ag_config");
+  if(fbTimer)clearInterval(fbTimer);
+  location.reload();
 }
 
 // ── AUTO LOGIN ──
