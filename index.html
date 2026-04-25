@@ -590,7 +590,11 @@ function goTab(t){
   document.getElementById('addbtn').textContent=lbl[t]||'+ Ajouter';
 }
 function clickAdd(){
-  if(G.tab==='agenda')openM('mev');
+  if(G.tab==='agenda'){
+    // Use selected date if available, otherwise today
+    document.getElementById('ed').value=G.sel||today();
+    openM('mev');
+  }
   else if(G.tab==='anniv')openM('mann');
   else{document.getElementById('tinp').focus();document.getElementById('tinp').scrollIntoView({behavior:'smooth'});}
 }
@@ -867,8 +871,7 @@ function nativeNotif(title,body){
   else{new Notification(title,{body:body,icon:'/notre-agenda/icons/icon-192.png'});}
 }
 
-// Set default date
-document.getElementById('ed').value=today();
+// Date set dynamically when modal opens
 </script>
 </body>
 </html>
