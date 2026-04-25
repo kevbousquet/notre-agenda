@@ -445,6 +445,7 @@ function startApp(demo=false){
   boot();
 }
 function boot(){
+  try {
   document.getElementById('setup').style.display='none';
   ['hdr','code-bar','main'].forEach(id=>document.getElementById(id).style.display=id==='main'?'block':'flex');
   document.getElementById('app-title').textContent='💑 '+G.n1+' & '+G.n2;
@@ -469,13 +470,31 @@ function logout(){
   if(!confirm("Revenir à l'écran de configuration ?"))return;
   localStorage.removeItem('ag_config');
   if(fbTimer)clearInterval(fbTimer);
+  // Reset state
+  G.events=[]; G.todos=[]; G.annivs=[]; G.notifs=[];
   location.reload();
 }
 
 // ── AUTO LOGIN ──
 window.addEventListener('load',()=>{
-  const cfg=localStorage.getItem('ag_config');
-  if(cfg){try{const c=JSON.parse(cfg);G.n1=c.n1;G.n2=c.n2;G.code=c.code;G.fbUrl=c.fbUrl||'';boot();}catch(e){}}
+  try {
+    const cfg=localStorage.getItem('ag_config');
+    if(cfg){
+      const c=JSON.parse(cfg);
+      if(c && c.n1 && c.code) {
+        G.n1=c.n1; G.n2=c.n2||''; G.code=c.code; G.fbUrl=c.fbUrl||'';
+        // Pre-fill setup form in case boot fails
+        document.getElementById('n1').value=G.n1;
+        document.getElementById('n2').value=G.n2;
+        document.getElementById('code').value=G.code;
+        if(G.fbUrl) document.getElementById('fburl').value=G.fbUrl;
+        boot();
+      }
+    }
+  } catch(e) {
+    console.error('Auto-login failed:', e);
+    localStorage.removeItem('ag_config');
+  }
 });
 
 // ── SERVICE WORKER ──
