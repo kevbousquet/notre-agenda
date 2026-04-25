@@ -324,6 +324,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
       </select>
     </div>
     <div class="mf"><label>Note</label><textarea id="en" rows="2" placeholder="Détails..."></textarea></div>
+    <div class="mf" style="background:var(--sage-l);border-radius:12px;padding:.85rem">
+      <label style="color:var(--sage)">🔔 Rappel</label>
+      <select id="er" style="background:#fff;border-color:var(--sage)">
+        <option value="0">Pas de rappel</option>
+        <option value="0s">Le jour même (matin)</option>
+        <option value="1" selected>La veille</option>
+        <option value="3">3 jours avant</option>
+        <option value="7">1 semaine avant</option>
+      </select>
+    </div>
     <div class="mac"><button class="mcanc" onclick="closeM('mev')">Annuler</button><button class="msav" onclick="saveEv()">Enregistrer 💾</button></div>
   </div>
 </div>
@@ -437,6 +447,7 @@ function boot(){
   if(G.fb && !G.demo){syncFb();}else{setOff();}
   checkPush();
   checkAnnivReminders();
+  checkEvReminders();
   addDailyNotif();
   renderCal();
   selDate(today());
@@ -588,7 +599,7 @@ function renderCal(){
   renderToday();
 }
 function renderToday(){
-  var evs=G.events.filter(function(e){return e.date===today()}).sort(function(a,b){return(a.time||'').localeCompare(b.time||'')});
+  var td2=today();var evs=G.events.filter(function(e){return e.date && e.date.trim()===td2}).sort(function(a,b){return(a.time||'').localeCompare(b.time||'')});
   var el=document.getElementById('todaystrip');
   if(!evs.length){el.innerHTML='<p class="tempty">Rien de prévu — journée libre 🌸</p>';return;}
   el.innerHTML=evs.map(function(e){return'<div class="tev">'+(CE[e.cat]||'📌')+' <strong>'+e.title+'</strong>'+(e.time?' · '+e.time:'')+'</div>'}).join('');
@@ -597,11 +608,11 @@ function selDate(ds){
   G.sel=ds; renderCal();
   var p=ds.split('-'); var lbl=new Date(p[0],p[1]-1,p[2]).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('evdate').textContent=lbl.charAt(0).toUpperCase()+lbl.slice(1);
-  var evs=G.events.filter(function(e){return e.date===ds}).sort(function(a,b){return(a.time||'23:59').localeCompare(b.time||'23:59')});
+  var evs=G.events.filter(function(e){return e.date && e.date.trim()===ds.trim()}).sort(function(a,b){return(a.time||'23:59').localeCompare(b.time||'23:59')});
   var list=document.getElementById('evlist');
   if(!evs.length){list.innerHTML='<div class="noev"><p>Aucun événement<br><span style="font-size:.8rem;opacity:.7">Appuyez sur "+ Ajouter"</span></p></div>';return;}
   list.innerHTML=evs.map(function(ev){
-    return '<div class="evc'+(ev.authorName!==G.n1?' pt':'')+'"><div class="evt">'+(ev.time||'Toute la journée')+'</div><div class="evb"><div class="evn">'+(CE[ev.cat]||'📌')+' '+ev.title+'</div><div class="evm"><span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span><span>'+(CL[ev.cat]||'Autre')+'</span>'+(ev.note?'<span>📝 '+ev.note+'</span>':'')+'</div></div><button class="edel" onclick="delEv(\''+ev.id+'\')">✕</button></div>';
+    return '<div class="evc'+(ev.authorName!==G.n1?' pt':'')+'"><div class="evt">'+(ev.time||'Toute la journée')+'</div><div class="evb"><div class="evn">'+(CE[ev.cat]||'📌')+' '+ev.title+'</div><div class="evm"><span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span><span>'+(CL[ev.cat]||'Autre')+'</span>'+(ev.note?'<span>📝 '+ev.note+'</span>':'')+(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')+'</div></div><button class="edel" onclick="delEv(\''+ev.id+'\')">✕</button></div>';
   }).join('');
 }
 function chMo(d){G.mo+=d;if(G.mo>11){G.mo=0;G.yr++;}if(G.mo<0){G.mo=11;G.yr--;}renderCal();}
@@ -613,13 +624,13 @@ function saveEv(){
   var t=document.getElementById('et').value.trim();
   var d=document.getElementById('ed').value;
   if(!t||!d){alert('Titre et date obligatoires');return;}
-  var ev={id:Date.now().toString(),title:t,date:d,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),authorName:G.n1,ts:Date.now()};
+  var reminder=document.getElementById('er').value;var ev={id:Date.now().toString(),title:t,date:d,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
   G.events.push(ev);
   pushN('📅',G.n1+' a ajouté "'+t+'" le '+fmtFR(d),'À l\'instant');
   putFb('events/'+ev.id,ev);
   saveLocal();
   closeM('mev');
-  document.getElementById('et').value='';document.getElementById('eh').value='';document.getElementById('en').value='';
+  document.getElementById('et').value='';document.getElementById('eh').value='';document.getElementById('en').value='';document.getElementById('er').value='1';
   renderCal();selDate(d);
 }
 function delEv(id){
@@ -754,6 +765,33 @@ function checkAnnivReminders(){
         localStorage.setItem(k2,'1');
         var msg2='🥳 C\'est l\'anniversaire de '+a.name+' aujourd\'hui'+as+' !';
         pushN('🥳',msg2,'Aujourd\'hui');nativeNotif('🥳 Anniversaire !',msg2);
+      }
+    }
+  });
+}
+
+function checkEvReminders(){
+  var td=today();
+  G.events.forEach(function(ev){
+    if(!ev.reminder||ev.reminder==='0')return;
+    var evDate=ev.date;
+    var reminderDate='';
+    if(ev.reminder==='0s'){
+      reminderDate=evDate; // same day
+    } else {
+      var days=parseInt(ev.reminder);
+      var d=new Date(evDate.split('-')[0],parseInt(evDate.split('-')[1])-1,evDate.split('-')[2]);
+      d.setDate(d.getDate()-days);
+      reminderDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    }
+    if(reminderDate===td){
+      var k='evr_'+ev.id+'_'+td;
+      if(!localStorage.getItem(k)){
+        localStorage.setItem(k,'1');
+        var daysLeft=ev.reminder==='0s'?0:parseInt(ev.reminder);
+        var msg=daysLeft===0?'📅 Rappel : "'+ev.title+'" aujourd'hui'+(ev.time?' à '+ev.time:'')+'!':'📅 Rappel : "'+ev.title+'" '+(daysLeft===1?'demain':'dans '+daysLeft+' jours')+(ev.time?' à '+ev.time:'')+'!';
+        pushN('📅',msg,'Rappel événement');
+        nativeNotif('📅 Rappel',msg);
       }
     }
   });
