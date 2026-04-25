@@ -161,6 +161,31 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
 .prio-btn.active { background: var(--rose-light); border-color: var(--rose); color: var(--rose-dark); font-weight: 500; }
 .prio-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
 
+/* ── ANNIVERSAIRES ── */
+.anniv-wrap { padding: 1rem; }
+.anniv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.anniv-header h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+.anniv-add-btn { padding: .55rem 1rem; background: #F5A623; color: white; border: none; border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 500; cursor: pointer; }
+.anniv-card { background: white; border-radius: 16px; padding: 1rem 1.1rem; box-shadow: 0 2px 10px rgba(44,43,43,.06); display: flex; align-items: center; gap: .9rem; margin-bottom: .6rem; border-left: 4px solid #F5A623; }
+.anniv-card.today-bday { border-left-color: var(--rose); background: var(--rose-light); }
+.anniv-card.soon-bday { border-left-color: #F5A623; background: #FFF8F0; }
+.anniv-icon { font-size: 1.5rem; flex-shrink: 0; }
+.anniv-body { flex: 1; min-width: 0; }
+.anniv-name { font-size: .92rem; font-weight: 500; color: var(--charcoal); margin-bottom: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.anniv-date-lbl { font-size: .75rem; color: var(--muted); }
+.anniv-reminder-lbl { font-size: .67rem; color: var(--sage); margin-top: .15rem; }
+.anniv-right { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex-shrink: 0; }
+.countdown-pill { font-size: .7rem; font-weight: 600; padding: .2rem .6rem; border-radius: 20px; white-space: nowrap; }
+.countdown-pill.future { background: #FFF3D6; color: #9A6500; }
+.countdown-pill.soon2 { background: #FFE8E8; color: #c94a4a; }
+.countdown-pill.today2 { background: var(--rose-light); color: var(--rose-dark); animation: heartbeat .8s infinite alternate; }
+@keyframes heartbeat { from{transform:scale(1)} to{transform:scale(1.06)} }
+.anniv-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .8rem; opacity: .4; padding: 2px; }
+.anniv-del:active { opacity: 1; color: #c94a4a; }
+.anniv-empty { background: #FFF8F0; border: 1.5px dashed rgba(245,166,35,.5); border-radius: 16px; padding: 2rem; text-align: center; margin-top: .5rem; }
+.anniv-empty p { color: #9A6500; font-size: .88rem; line-height: 1.6; }
+.anniv-section-title { font-size: .68rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .6rem; padding-left: .25rem; }
+
 /* ── MODAL ── */
 .modal-bg { position: fixed; inset: 0; background: rgba(44,43,43,.5); backdrop-filter: blur(6px); display: none; align-items: flex-end; justify-content: center; z-index: 200; }
 .modal-bg.open { display: flex; }
@@ -257,6 +282,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
     <button class="tab-btn active" id="tab-agenda" onclick="switchTab('agenda')">
       <span class="tab-icon">📅</span>Agenda
     </button>
+    <button class="tab-btn" id="tab-anniv" onclick="switchTab('anniv')">
+      <span class="tab-icon">🎂</span>Anniversaires
+      <span class="tab-badge" id="anniv-badge"></span>
+    </button>
     <button class="tab-btn" id="tab-todo" onclick="switchTab('todo')">
       <span class="tab-icon">✅</span>Todo
       <span class="tab-badge" id="todo-badge"></span>
@@ -342,6 +371,38 @@ body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(
   </div>
 </div>
 
+<!-- MODAL ANNIVERSAIRE -->
+<div class="modal-bg" id="modal-anniv" onclick="if(event.target===this)closeModal('modal-anniv')">
+  <div class="modal">
+    <h2>🎂 Nouvel anniversaire</h2>
+    <div class="mfield"><label>Nom / prénom</label><input type="text" id="an-name" placeholder="Ex: Maman, Pierre..."></div>
+    <div class="mfield"><label>Date de naissance (ou date de l'événement)</label><input type="date" id="an-date"></div>
+    <div class="mfield">
+      <label>Type</label>
+      <select id="an-type">
+        <option value="birthday">🎂 Anniversaire</option>
+        <option value="wedding">💍 Anniversaire de mariage</option>
+        <option value="other">🎉 Autre événement annuel</option>
+      </select>
+    </div>
+    <div class="mfield" style="background:var(--sage-light);border-radius:12px;padding:.85rem">
+      <label style="color:var(--sage)">🔔 Rappel</label>
+      <select id="an-reminder" style="background:white;border-color:var(--sage)">
+        <option value="0">Le jour même</option>
+        <option value="1" selected>La veille</option>
+        <option value="3">3 jours avant</option>
+        <option value="7">1 semaine avant</option>
+        <option value="14">2 semaines avant</option>
+      </select>
+    </div>
+    <div class="mfield"><label>Note (optionnel)</label><input type="text" id="an-note" placeholder="Ex: Aime les fleurs..."></div>
+    <div class="mactions">
+      <button class="m-cancel" onclick="closeModal('modal-anniv')">Annuler</button>
+      <button class="m-save" onclick="saveAnniv()">Enregistrer 🎂</button>
+    </div>
+  </div>
+</div>
+
 <!-- NOTIF PANEL -->
 <div class="notif-bg" id="notif-bg" onclick="closeNotif()"></div>
 <div class="notif-panel" id="notif-panel">
@@ -359,7 +420,7 @@ const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août'
 const CE={famille:'👨‍👩‍👧',loisir:'🎭',sante:'🏥',travail:'💼',autre:'📌'};
 const CL={famille:'Famille',loisir:'Loisir',sante:'Santé',travail:'Travail',autre:'Autre'};
 
-let G={n1:'',n2:'',code:'',fbUrl:'',events:[],todos:[],notifs:[],mo:new Date().getMonth(),yr:new Date().getFullYear(),sel:null,demo:false,todoFilter:'all'};
+let G={n1:'',n2:'',code:'',fbUrl:'',events:[],todos:[],annivs:[],notifs:[],mo:new Date().getMonth(),yr:new Date().getFullYear(),sel:null,demo:false,todoFilter:'all'};
 let fbTimer=null, currentTab='agenda';
 
 // ── SETUP ──
@@ -394,8 +455,11 @@ function boot(){
   renderCal();
   selDate(today());
   renderTodo();
+  renderAnniv();
   updateBadge();
   updateTodoBadge();
+  updateAnnivBadge();
+  checkAnnivReminders();
   registerSW();
   checkPushPermission();
 }
@@ -464,10 +528,11 @@ function switchTab(tab){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
-  document.getElementById('add-btn').textContent=tab==='agenda'?'+ Ajouter':'+ Tâche';
+  document.getElementById('add-btn').textContent=tab==='agenda'?'+ Ajouter':tab==='anniv'?'+ Anniv':'+ Tâche';
 }
 function openAddModal(){
   if(currentTab==='agenda') openModal('modal-ev');
+  else if(currentTab==='anniv') openModal('modal-anniv');
   else { document.getElementById('todo-input').focus(); document.getElementById('todo-input').scrollIntoView({behavior:'smooth'}); }
 }
 
@@ -483,6 +548,7 @@ async function fetchFb(){
     const prevTodoLen=G.todos.length;
     G.events=data&&data.events?Object.values(data.events):[];
     G.todos=data&&data.todos?Object.values(data.todos):[];
+    G.annivs=data&&data.annivs?Object.values(data.annivs):[];
 
     // Notify new events from partner
     if(G.events.length>prevEvLen&&prevEvLen>0){
@@ -506,7 +572,7 @@ async function fetchFb(){
       }
     }
 
-    setSyncOn();renderCal();if(G.sel)selDate(G.sel);renderTodo();updateTodoBadge();
+    setSyncOn();renderCal();if(G.sel)selDate(G.sel);renderTodo();updateTodoBadge();renderAnniv();updateAnnivBadge();
   }catch(e){setSyncOff();}
 }
 async function pushFb(path,data){
@@ -518,8 +584,8 @@ async function deleteFb(path){
 }
 
 // ── LOCAL ──
-function saveLocal(){try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,notifs:G.notifs}));}catch(e){}}
-function loadLocal(){try{const d=JSON.parse(localStorage.getItem('ag_'+G.code)||'{}');G.events=d.events||[];G.todos=d.todos||[];G.notifs=d.notifs||[];}catch(e){G.events=[];G.todos=[];G.notifs=[];}}
+function saveLocal(){try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,annivs:G.annivs,notifs:G.notifs}));}catch(e){}}
+function loadLocal(){try{const d=JSON.parse(localStorage.getItem('ag_'+G.code)||'{}');G.events=d.events||[];G.todos=d.todos||[];G.annivs=d.annivs||[];G.notifs=d.notifs||[];}catch(e){G.events=[];G.todos=[];G.annivs=[];G.notifs=[];}}
 
 // ── SYNC UI ──
 function setSyncOn(){const p=document.getElementById('sync-pill');p.className='sync-pill';document.getElementById('sync-lbl').textContent='Synchronisé';}
@@ -703,6 +769,156 @@ function renderNotifs(){
 function clearNotifs(){G.notifs=[];updateBadge();renderNotifs();saveLocal();}
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+
+
+// ── ANNIVERSAIRES ──
+const ANNIV_TYPES = {birthday:'🎂',wedding:'💍',other:'🎉'};
+const ANNIV_LABELS = {birthday:'Anniversaire',wedding:'Anniv. de mariage',other:'Événement annuel'};
+
+function daysUntilNextOccurrence(dateStr) {
+  const [,m,d] = dateStr.split('-').map(Number);
+  const now = new Date(); now.setHours(0,0,0,0);
+  const thisYear = now.getFullYear();
+  let next = new Date(thisYear, m-1, d);
+  if(next < now) next = new Date(thisYear+1, m-1, d);
+  return Math.round((next - now) / 86400000);
+}
+
+function ageThisYear(dateStr) {
+  const [y] = dateStr.split('-').map(Number);
+  if(!y || y < 1900) return null;
+  return new Date().getFullYear() - y;
+}
+
+function nextOccurrenceDateStr(dateStr) {
+  const [,m,d] = dateStr.split('-').map(Number);
+  const now = new Date(); now.setHours(0,0,0,0);
+  const thisYear = now.getFullYear();
+  let next = new Date(thisYear, m-1, d);
+  if(next < now) next = new Date(thisYear+1, m-1, d);
+  return `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`;
+}
+
+async function saveAnniv() {
+  const name = document.getElementById('an-name').value.trim();
+  const date = document.getElementById('an-date').value;
+  if(!name || !date) { alert('Nom et date obligatoires'); return; }
+  const anniv = {
+    id: Date.now().toString(),
+    name, date,
+    type: document.getElementById('an-type').value,
+    reminder: parseInt(document.getElementById('an-reminder').value),
+    note: document.getElementById('an-note').value.trim(),
+    authorName: G.n1,
+    ts: Date.now()
+  };
+  G.annivs.push(anniv);
+  pushNotif('🎂', `${G.n1} a ajouté l'anniversaire de ${name}`, 'À l'instant');
+  if(G.fbUrl && !G.demo) { await pushFb('annivs/'+anniv.id, anniv); } else { saveLocal(); }
+  closeModal('modal-anniv');
+  ['an-name','an-note'].forEach(id=>document.getElementById(id).value='');
+  renderAnniv();
+  updateAnnivBadge();
+}
+
+async function delAnniv(id) {
+  G.annivs = G.annivs.filter(a => a.id !== id);
+  if(G.fbUrl && !G.demo) { await deleteFb('annivs/'+id); } else { saveLocal(); }
+  renderAnniv();
+  updateAnnivBadge();
+}
+
+function renderAnniv() {
+  const sorted = [...G.annivs].sort((a,b) => daysUntilNextOccurrence(a.date) - daysUntilNextOccurrence(b.date));
+
+  // Upcoming strip (next 30 days)
+  const upcoming = sorted.filter(a => daysUntilNextOccurrence(a.date) <= 30);
+  const upEl = document.getElementById('anniv-upcoming');
+  if(upcoming.length) {
+    upEl.innerHTML = `<div style="background:var(--rose-light);border-radius:14px;padding:.9rem 1.1rem;margin-bottom:1rem">
+      <div style="font-size:.68rem;font-weight:500;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem">🎉 Dans les 30 prochains jours</div>
+      ${upcoming.map(a => {
+        const days = daysUntilNextOccurrence(a.date);
+        const age = ageThisYear(a.date);
+        return `<div style="font-size:.84rem;color:var(--rose-dark);margin-bottom:.2rem">
+          ${ANNIV_TYPES[a.type]||'🎉'} <strong>${a.name}</strong>
+          ${days===0 ? "— C'est aujourd'hui ! 🥳" : `dans ${days} jour${days>1?'s':''}`}
+          ${age?' ('+age+' ans)':''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  } else {
+    upEl.innerHTML = '';
+  }
+
+  // Full list
+  const listEl = document.getElementById('anniv-list');
+  document.getElementById('anniv-list-title').textContent = `Tous les anniversaires (${sorted.length})`;
+  if(!sorted.length) {
+    listEl.innerHTML = `<div class="anniv-empty"><p>🎂 Aucun anniversaire enregistré.<br>Ajoutez ceux de vos proches pour ne plus jamais oublier !</p></div>`;
+    return;
+  }
+  listEl.innerHTML = sorted.map(a => {
+    const days = daysUntilNextOccurrence(a.date);
+    const age = ageThisYear(a.date);
+    const [,m,d] = a.date.split('-');
+    const dateLabel = `${parseInt(d)} ${['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc')[parseInt(m)-1]}` + (age ? ` (${age} ans cette année)` : '');
+    let pillClass = 'future', pillText = `Dans ${days} j.`;
+    if(days === 0) { pillClass = 'today2'; pillText = "Aujourd'hui 🥳"; }
+    else if(days <= 7) { pillClass = 'soon2'; pillText = `Dans ${days}j`; }
+    const cardClass = days===0 ? 'today-bday' : days<=7 ? 'soon-bday' : '';
+    return `<div class="anniv-card ${cardClass}">
+      <span class="anniv-icon">${ANNIV_TYPES[a.type]||'🎉'}</span>
+      <div class="anniv-body">
+        <div class="anniv-name">${a.name}</div>
+        <div class="anniv-date-lbl">${dateLabel} · ${ANNIV_LABELS[a.type]||'Annuel'}</div>
+        <div class="anniv-reminder-lbl">🔔 Rappel ${a.reminder===0?'le jour même':a.reminder===1?'la veille':`${a.reminder} jours avant`}${a.note?' · 📝 '+a.note:''}</div>
+      </div>
+      <div class="anniv-right">
+        <span class="countdown-pill ${pillClass}">${pillText}</span>
+        <button class="anniv-del" onclick="delAnniv('${a.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateAnnivBadge() {
+  const soon = G.annivs.filter(a => daysUntilNextOccurrence(a.date) <= 7).length;
+  const badge = document.getElementById('anniv-badge');
+  badge.textContent = soon > 9 ? '9+' : soon;
+  badge.classList.toggle('show', soon > 0);
+}
+
+function checkAnnivReminders() {
+  const todayStr = today();
+  G.annivs.forEach(a => {
+    const days = daysUntilNextOccurrence(a.date);
+    const age = ageThisYear(a.date);
+    const ageStr = age ? ` (${age} ans)` : '';
+    // Check if reminder should fire today
+    if(days === a.reminder) {
+      const key = `anniv_reminded_${a.id}_${todayStr}`;
+      if(!localStorage.getItem(key)) {
+        localStorage.setItem(key, '1');
+        const msg = days===0
+          ? `🥳 C'est l'anniversaire de ${a.name} aujourd'hui${ageStr} !`
+          : `🎂 Anniversaire de ${a.name}${ageStr} ${days===1?'demain':'dans '+days+' jours'} !`;
+        pushNotif('🎂', msg, "Rappel anniversaire");
+        showNativeNotif('🎂 Rappel anniversaire', msg);
+      }
+    }
+    // Also notify day-of always
+    if(days === 0) {
+      const key = `anniv_today_${a.id}_${todayStr}`;
+      if(!localStorage.getItem(key)) {
+        localStorage.setItem(key, '1');
+        const msg = `🥳 C'est l'anniversaire de ${a.name} aujourd'hui${ageStr} !`;
+        pushNotif('🥳', msg, "Aujourd'hui");
+        showNativeNotif('🥳 Anniversaire !', msg);
+      }
+    }
+  });
+}
 
 // Set default date in modal
 document.getElementById('ev-d').value=today();
