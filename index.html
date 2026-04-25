@@ -789,7 +789,7 @@ function checkEvReminders(){
       if(!localStorage.getItem(k)){
         localStorage.setItem(k,'1');
         var daysLeft=ev.reminder==='0s'?0:parseInt(ev.reminder);
-        var msg=daysLeft===0?'📅 Rappel : "'+ev.title+'" aujourd'hui'+(ev.time?' à '+ev.time:'')+'!':'📅 Rappel : "'+ev.title+'" '+(daysLeft===1?'demain':'dans '+daysLeft+' jours')+(ev.time?' à '+ev.time:'')+'!';
+        var msg=daysLeft===0?'📅 Rappel : "'+ev.title+'" aujourd\'hui'+(ev.time?' à '+ev.time:'')+'!':'📅 Rappel : "'+ev.title+'" '+(daysLeft===1?'demain':'dans '+daysLeft+' jours')+(ev.time?' à '+ev.time:'')+'!';
         pushN('📅',msg,'Rappel événement');
         nativeNotif('📅 Rappel',msg);
       }
