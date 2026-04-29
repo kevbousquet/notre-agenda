@@ -464,11 +464,20 @@ function boot(){
 
 // ── AUTO LOGIN ──
 (function(){
+  var raw, c;
+  // Étape 1 : lecture + parsing JSON — seule cette étape justifie d'effacer la config
   try{
-    var raw=localStorage.getItem('ag_cfg');
+    raw=localStorage.getItem('ag_cfg');
     if(!raw)return;
-    var c=JSON.parse(raw);
-    if(!c||!c.n1||!c.code)return;
+    c=JSON.parse(raw);
+  }catch(e){
+    // JSON corrompu → on efface et on montre l'écran d'accueil
+    try{localStorage.removeItem('ag_cfg')}catch(x){}
+    return;
+  }
+  if(!c||!c.n1||!c.code)return;
+  // Étape 2 : démarrage de l'app — une erreur ici ne doit JAMAIS effacer la session
+  try{
     G.n1=c.n1; G.n2=c.n2||''; G.code=c.code; G.fb=c.fb||''; G.demo=false;
     document.getElementById('n1').value=G.n1;
     document.getElementById('n2').value=G.n2;
@@ -476,7 +485,9 @@ function boot(){
     if(G.fb)document.getElementById('fburl').value=G.fb;
     boot();
   }catch(e){
-    try{localStorage.removeItem('ag_cfg')}catch(x){}
+    // On recharge la page sans toucher à ag_cfg pour réessayer proprement
+    console.error('Erreur boot:', e);
+    setTimeout(function(){location.reload();}, 500);
   }
 })();
 
@@ -491,7 +502,22 @@ function doLogout(){
 function regSW(){
   if(!('serviceWorker' in navigator))return;
   navigator.serviceWorker.register('/notre-agenda/sw.js',{scope:'/notre-agenda/'})
-    .then(function(r){swReg=r;}).catch(function(){});
+    .then(function(r){
+      swReg=r;
+      // Enregistrer le sync périodique quotidien (PWA Android/Chrome)
+      if(r.periodicSync){
+        r.periodicSync.register('daily-check',{minInterval:86400000}).catch(function(){});
+      }
+    }).catch(function(){});
+  // Écouter les messages du SW (réveil en arrière-plan)
+  navigator.serviceWorker.addEventListener('message',function(e){
+    if(e.data&&e.data.type==='CHECK_REMINDERS'&&G.n1){
+      checkAnnivReminders();
+      checkEvReminders();
+      renderToday();
+      updateNbdg();
+    }
+  });
 }
 
 // ── FIREBASE ──
@@ -572,7 +598,7 @@ function loadLocal(){
     G.annivs=(d.annivs||[]).map(function(a){
       var nd=normalizeDate(a.date);
       if(!nd)return null;
-      return {id:a.id,name:a.name||'',date:nd,type:a.type||'birthday',reminder:a.reminder||1,note:a.note||'',authorName:a.authorName||G.n1,ts:a.ts||Date.now()};
+      return {id:a.id,name:a.name||'',date:nd,type:a.type||'birthday',reminder:(a.reminder!=null?a.reminder:-1),note:a.note||'',authorName:a.authorName||G.n1,ts:a.ts||Date.now()};
     }).filter(function(a){return a!==null;});
     G.notifs=d.notifs||[];
     saveLocal();
@@ -887,6 +913,20 @@ function nativeNotif(title,body){
   if(swReg){swReg.showNotification(title,{body:body,icon:'/notre-agenda/icons/icon-192.png',badge:'/notre-agenda/icons/icon-192.png',vibrate:[100,50,100],tag:'agenda-notif',renotify:true});}
   else{new Notification(title,{body:body,icon:'/notre-agenda/icons/icon-192.png'});}
 }
+
+// ── REPRISE D'ACTIVITÉ ──
+// Quand l'utilisateur revient sur l'app (depuis un autre onglet, le bureau, etc.)
+// on relance les vérifications de rappels et la synchro Firebase.
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible' && G.n1){
+    checkAnnivReminders();
+    checkEvReminders();
+    if(G.fb && !G.demo){fetchFb();}
+    renderToday();
+    updateAbdg();
+    updateNbdg();
+  }
+});
 
 // Date set dynamically when modal opens
 </script>
