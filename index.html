@@ -452,6 +452,7 @@ function boot(){
   checkAnnivReminders();
   checkEvReminders();
   addDailyNotif();
+  addWeeklyNotif();
   renderCal();
   selDate(today());
   renderTodo();
@@ -516,6 +517,7 @@ function regSW(){
     if(e.data&&e.data.type==='CHECK_REMINDERS'&&G.n1){
       checkAnnivReminders();
       checkEvReminders();
+      addWeeklyNotif();
       renderToday();
       updateNbdg();
     }
@@ -1021,6 +1023,63 @@ function addDailyNotif(){
   saveLocal();
   setTimeout(function(){nativeNotif('☀️ Bonjour !',msg);},1000);
 }
+// ── RÉSUMÉ HEBDOMADAIRE (dimanche soir) ──
+function addWeeklyNotif(){
+  var now=new Date();
+  // Seulement le dimanche (0) à partir de 18h
+  if(now.getDay()!==0||now.getHours()<18)return;
+  var td=today();
+  var key='weekly_'+td;
+  if(localStorage.getItem(key))return; // déjà envoyé aujourd'hui
+  localStorage.setItem(key,'1');
+
+  // Construire la liste des 7 prochains jours (lun → dim)
+  var lines=[];
+  var dayNames=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  for(var i=1;i<=7;i++){
+    var d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()+i);
+    var ds=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    var dayLabel=dayNames[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1);
+
+    // Événements ce jour
+    var evs=G.events.filter(function(e){return e.date===ds});
+    evs.forEach(function(e){
+      lines.push(dayLabel+' · '+e.title+(e.time?' à '+e.time:''));
+    });
+
+    // Anniversaires ce jour (comparaison mois/jour)
+    var mmdd=ds.slice(5);
+    G.annivs.forEach(function(a){
+      if(a.date.slice(5)===mmdd){
+        var age=ageNow(a.date);
+        lines.push(dayLabel+' 🎂 '+a.name+(age?' ('+age+' ans)':''));
+      }
+    });
+  }
+
+  var pend=G.todos.filter(function(t){return!t.done}).length;
+
+  // Message principal
+  var title='🗓️ Semaine à venir — '+G.n1+' & '+G.n2;
+  var body='';
+  if(!lines.length){
+    body='Semaine libre ! Parfait pour improviser 💑';
+  } else {
+    body=lines.slice(0,4).join('\n'); // 4 lignes max dans la notif native
+    if(lines.length>4)body+='\n… et '+(lines.length-4)+' autre'+(lines.length-4>1?'s':'');
+  }
+  if(pend>0)body+='\n📝 '+pend+' tâche'+(pend>1?'s':'')+' en attente';
+
+  // Notification dans le panneau interne
+  var inAppText='Semaine à venir : '+(lines.length?lines.length+' événement'+(lines.length>1?'s':''):'rien de prévu')+(pend?' · '+pend+' tâche'+(pend>1?'s':''):'');
+  G.notifs.unshift({id:Date.now(),type:'weekly',date:td,icon:'🗓️',text:inAppText,time:'Ce soir',read:false});
+  saveLocal();
+  updateNbdg();
+
+  // Notification native
+  setTimeout(function(){nativeNotif(title,body);},1500);
+}
+
 function pushN(icon,text,time){G.notifs.unshift({id:Date.now(),icon:icon,text:text,time:time,read:false});updateNbdg();saveLocal();}
 function updateNbdg(){
   var n=G.notifs.filter(function(n){return!n.read}).length;
@@ -1063,6 +1122,7 @@ document.addEventListener('visibilitychange', function(){
   if(document.visibilityState==='visible' && G.n1){
     checkAnnivReminders();
     checkEvReminders();
+    addWeeklyNotif();
     // Reconnecter le SSE s'il s'est fermé pendant que l'app était en arrière-plan
     if(G.fb && !G.demo){
       if(!fbSource || fbSource.readyState===EventSource.CLOSED){
