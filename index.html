@@ -310,7 +310,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 <!-- MODAL EVENT -->
 <div class="mbg" id="mev" onclick="if(event.target===this)closeM('mev')">
   <div class="modal">
-    <h2>📅 Nouvel événement</h2>
+    <h2 id="mev-title">📅 Nouvel événement</h2>
+    <input type="hidden" id="eid">
     <div class="mf"><label>Titre</label><input type="text" id="et" placeholder="Ex: Dîner chez les parents"></div>
     <div class="mrow">
       <div class="mf"><label>Date</label><input type="date" id="ed"></div>
@@ -336,14 +337,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
         <option value="7">1 semaine avant</option>
       </select>
     </div>
-    <div class="mac"><button class="mcanc" onclick="closeM('mev')">Annuler</button><button class="msav" onclick="saveEv()">Enregistrer 💾</button></div>
+    <div class="mac"><button class="mcanc" onclick="closeM('mev')">Annuler</button><button class="msav" id="mev-save" onclick="saveEv()">Enregistrer 💾</button></div>
   </div>
 </div>
 
 <!-- MODAL ANNIVERSAIRE -->
 <div class="mbg" id="mann" onclick="if(event.target===this)closeM('mann')">
   <div class="modal">
-    <h2>🎂 Nouvel anniversaire</h2>
+    <h2 id="mann-title">🎂 Nouvel anniversaire</h2>
+    <input type="hidden" id="annid">
     <div class="mf"><label>Nom / prénom</label><input type="text" id="an" placeholder="Ex: Maman, Pierre..."></div>
     <div class="mf"><label>Date de naissance</label><input type="date" id="ad"></div>
     <div class="mf"><label>Type</label>
@@ -364,7 +366,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
       </select>
     </div>
     <div class="mf"><label>Note</label><input type="text" id="ano" placeholder="Ex: Aime les fleurs..."></div>
-    <div class="mac"><button class="mcanc" onclick="closeM('mann')">Annuler</button><button class="msav" onclick="saveAnniv()">Enregistrer 🎂</button></div>
+    <div class="mac"><button class="mcanc" onclick="closeM('mann')">Annuler</button><button class="msav" id="mann-save" onclick="saveAnniv()">Enregistrer 🎂</button></div>
   </div>
 </div>
 
@@ -766,11 +768,11 @@ function goTab(t){
 }
 function clickAdd(){
   if(G.tab==='agenda'){
-    // Use selected date if available, otherwise today
+    _resetEvModal();
     document.getElementById('ed').value=G.sel||today();
     openM('mev');
   }
-  else if(G.tab==='anniv')openM('mann');
+  else if(G.tab==='anniv'){_resetAnnivModal();openM('mann');}
   else{document.getElementById('tinp').focus();document.getElementById('tinp').scrollIntoView({behavior:'smooth'});}
 }
 
@@ -823,10 +825,10 @@ function selDate(ds){
   var html='';
   annivs.forEach(function(a){
     var age=ageNow(a.date);var as=age?' ('+age+' ans)':'';
-    html+='<div class="evc" style="border-left-color:#F5A623"><div class="evt" style="color:#9A6500">🎂</div><div class="evb"><div class="evn">'+(AT[a.type]||'🎉')+' '+a.name+as+'</div><div class="evm"><span style="color:#9A6500">'+(AL[a.type]||'Anniversaire')+'</span>'+(a.note?'<span>📝 '+a.note+'</span>':'')+'</div></div></div>';
+    html+='<div class="evc" style="border-left-color:#F5A623;cursor:pointer" onclick="editAnniv(\''+a.id+'\')"><div class="evt" style="color:#9A6500">🎂</div><div class="evb"><div class="evn">'+(AT[a.type]||'🎉')+' '+a.name+as+'</div><div class="evm"><span style="color:#9A6500">'+(AL[a.type]||'Anniversaire')+'</span>'+(a.note?'<span>📝 '+a.note+'</span>':'')+'</div></div><span style="font-size:.7rem;color:var(--muted);align-self:center;padding-left:.3rem">✏️</span></div>';
   });
   html+=evs.map(function(ev){
-    return '<div class="evc'+(ev.authorName!==G.n1?' pt':'')+'"><div class="evt">'+(ev.time||'Toute la journée')+'</div><div class="evb"><div class="evn">'+(CE[ev.cat]||'📌')+' '+ev.title+'</div><div class="evm"><span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span><span>'+(CL[ev.cat]||'Autre')+'</span>'+(ev.note?'<span>📝 '+ev.note+'</span>':'')+(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')+'</div></div><button class="edel" onclick="delEv(\''+ev.id+'\')">✕</button></div>';
+    return '<div class="evc'+(ev.authorName!==G.n1?' pt':'')+'" onclick="editEv(\''+ev.id+'\')" style="cursor:pointer"><div class="evt">'+(ev.time||'Toute la journée')+'</div><div class="evb"><div class="evn">'+(CE[ev.cat]||'📌')+' '+ev.title+'</div><div class="evm"><span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span><span>'+(CL[ev.cat]||'Autre')+'</span>'+(ev.note?'<span>📝 '+ev.note+'</span>':'')+(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')+'</div></div><button class="edel" onclick="event.stopPropagation();delEv(\''+ev.id+'\')">✕</button></div>';
   }).join('');
   list.innerHTML=html;}
 function chMo(d){G.mo+=d;if(G.mo>11){G.mo=0;G.yr++;}if(G.mo<0){G.mo=11;G.yr--;}renderCal();}
@@ -838,14 +840,51 @@ function saveEv(){
   var t=document.getElementById('et').value.trim();
   var d=document.getElementById('ed').value;
   if(!t||!d){alert('Titre et date obligatoires');return;}
-  var reminder=document.getElementById('er').value;var ev={id:Date.now().toString(),title:t,date:d,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
-  G.events.push(ev);
-  pushN('📅',G.n1+' a ajouté "'+t+'" le '+fmtFR(d),'À l\'instant');
-  putFb('events/'+ev.id,ev);
+  var reminder=document.getElementById('er').value;
+  var existingId=document.getElementById('eid').value;
+  if(existingId){
+    // ── MODIFICATION ──
+    var idx=G.events.findIndex(function(e){return e.id===existingId});
+    if(idx>=0){
+      var ev=G.events[idx];
+      ev.title=t;ev.date=d;ev.time=document.getElementById('eh').value;
+      ev.cat=document.getElementById('ec').value;ev.note=document.getElementById('en').value.trim();
+      ev.reminder=reminder;
+      putFb('events/'+ev.id,ev);
+      pushN('✏️',G.n1+' a modifié "'+t+'"','À l\'instant');
+    }
+  } else {
+    // ── CRÉATION ──
+    var ev={id:Date.now().toString(),title:t,date:d,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
+    G.events.push(ev);
+    pushN('📅',G.n1+' a ajouté "'+t+'" le '+fmtFR(d),'À l\'instant');
+    putFb('events/'+ev.id,ev);
+  }
   saveLocal();
   closeM('mev');
-  document.getElementById('et').value='';document.getElementById('eh').value='';document.getElementById('en').value='';document.getElementById('er').value='0';
+  _resetEvModal();
   renderCal();selDate(d);
+}
+function _resetEvModal(){
+  document.getElementById('eid').value='';
+  document.getElementById('et').value='';document.getElementById('eh').value='';
+  document.getElementById('en').value='';document.getElementById('er').value='0';
+  document.getElementById('mev-title').textContent='📅 Nouvel événement';
+  document.getElementById('mev-save').textContent='Enregistrer 💾';
+}
+function editEv(id){
+  var ev=G.events.find(function(e){return e.id===id});
+  if(!ev)return;
+  document.getElementById('eid').value=ev.id;
+  document.getElementById('et').value=ev.title;
+  document.getElementById('ed').value=ev.date;
+  document.getElementById('eh').value=ev.time||'';
+  document.getElementById('ec').value=ev.cat||'autre';
+  document.getElementById('en').value=ev.note||'';
+  document.getElementById('er').value=ev.reminder||'0';
+  document.getElementById('mev-title').textContent='✏️ Modifier l\'événement';
+  document.getElementById('mev-save').textContent='Mettre à jour 💾';
+  openM('mev');
 }
 function delEv(id){
   G.events=G.events.filter(function(e){return e.id!==id});
@@ -922,13 +961,50 @@ function saveAnniv(){
   var name=document.getElementById('an').value.trim();
   var date=document.getElementById('ad').value;
   if(!name||!date){alert('Nom et date obligatoires');return;}
-  var a={id:Date.now().toString(),name:name,date:date,type:document.getElementById('at').value,reminder:parseInt(document.getElementById('ar').value),note:document.getElementById('ano').value.trim(),authorName:G.n1,ts:Date.now()};
-  G.annivs.push(a);
-  pushN('🎂',G.n1+' a ajouté l\'anniversaire de '+name,'À l\'instant');
-  putFb('annivs/'+a.id,a);saveLocal();
+  var reminder=parseInt(document.getElementById('ar').value);
+  var note=document.getElementById('ano').value.trim();
+  var existingId=document.getElementById('annid').value;
+  if(existingId){
+    // ── MODIFICATION ──
+    var idx=G.annivs.findIndex(function(a){return a.id===existingId});
+    if(idx>=0){
+      var a=G.annivs[idx];
+      a.name=name;a.date=date;a.type=document.getElementById('at').value;
+      a.reminder=reminder;a.note=note;
+      putFb('annivs/'+a.id,a);
+      pushN('✏️',G.n1+' a modifié l\'anniversaire de '+name,'À l\'instant');
+    }
+  } else {
+    // ── CRÉATION ──
+    var a={id:Date.now().toString(),name:name,date:date,type:document.getElementById('at').value,reminder:reminder,note:note,authorName:G.n1,ts:Date.now()};
+    G.annivs.push(a);
+    pushN('🎂',G.n1+' a ajouté l\'anniversaire de '+name,'À l\'instant');
+    putFb('annivs/'+a.id,a);
+  }
+  saveLocal();
   closeM('mann');
-  document.getElementById('an').value='';document.getElementById('ano').value='';
+  _resetAnnivModal();
   renderAnniv();updateAbdg();
+}
+function _resetAnnivModal(){
+  document.getElementById('annid').value='';
+  document.getElementById('an').value='';document.getElementById('ano').value='';
+  document.getElementById('ar').value='-1';
+  document.getElementById('mann-title').textContent='🎂 Nouvel anniversaire';
+  document.getElementById('mann-save').textContent='Enregistrer 🎂';
+}
+function editAnniv(id){
+  var a=G.annivs.find(function(a){return a.id===id});
+  if(!a)return;
+  document.getElementById('annid').value=a.id;
+  document.getElementById('an').value=a.name;
+  document.getElementById('ad').value=a.date;
+  document.getElementById('at').value=a.type||'birthday';
+  document.getElementById('ar').value=String(a.reminder!=null?a.reminder:-1);
+  document.getElementById('ano').value=a.note||'';
+  document.getElementById('mann-title').textContent='✏️ Modifier l\'anniversaire';
+  document.getElementById('mann-save').textContent='Mettre à jour 🎂';
+  openM('mann');
 }
 function delAnniv(id){
   G.annivs=G.annivs.filter(function(a){return a.id!==id});
@@ -953,7 +1029,7 @@ function renderAnniv(){
     var mp=a.date.split('-'),dlbl=parseInt(mp[2])+' '+MOS[parseInt(mp[1])-1]+(age?' ('+age+' ans)':'');
     var pc=days===0?'ct':days<=7?'cs':'cf',pt=days===0?"Aujourd'hui 🥳":days<=7?'Dans '+days+'j':'Dans '+days+' j.';
     var cc=days===0?'abd':days<=7?'asd':'';
-    return '<div class="acard '+cc+'"><span class="aic">'+(AT[a.type]||'🎉')+'</span><div class="abdy"><div class="anm">'+a.name+'</div><div class="adlbl">'+dlbl+' · '+(AL[a.type]||'Annuel')+'</div><div class="armlbl">🔔 Rappel '+(a.reminder<0?'désactivé':a.reminder===0?'le jour même':a.reminder===1?'la veille':a.reminder+' jours avant')+(a.note?' · 📝 '+a.note:'')+'</div></div><div class="argt"><span class="cpill '+pc+'">'+pt+'</span><button class="adel" onclick="delAnniv(\''+a.id+'\')">✕</button></div></div>';
+    return '<div class="acard '+cc+'" onclick="editAnniv(\''+a.id+'\')" style="cursor:pointer"><span class="aic">'+(AT[a.type]||'🎉')+'</span><div class="abdy"><div class="anm">'+a.name+'</div><div class="adlbl">'+dlbl+' · '+(AL[a.type]||'Annuel')+'</div><div class="armlbl">🔔 Rappel '+(a.reminder<0?'désactivé':a.reminder===0?'le jour même':a.reminder===1?'la veille':a.reminder+' jours avant')+(a.note?' · 📝 '+a.note:'')+'</div></div><div class="argt"><span class="cpill '+pc+'">'+pt+'</span><button class="adel" onclick="event.stopPropagation();delAnniv(\''+a.id+'\')">✕</button></div></div>';
   }).join('');
 }
 function updateAbdg(){
