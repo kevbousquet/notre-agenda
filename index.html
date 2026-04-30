@@ -495,6 +495,8 @@ function doLogout(){
   if(!confirm("Revenir à l'écran de configuration ?"))return;
   try{localStorage.removeItem('ag_cfg')}catch(e){}
   if(fbTimer)clearInterval(fbTimer);
+  if(fbSource){fbSource.close();fbSource=null;}
+  if(fbRetryTimer){clearTimeout(fbRetryTimer);fbRetryTimer=null;}
   location.reload();
 }
 
@@ -522,52 +524,194 @@ function regSW(){
 
 // ── FIREBASE ──
 function fbPath(){return G.fb+'/agenda/'+G.code}
-function setOn(){var p=document.getElementById('spill');p.className='spill';document.getElementById('slbl').textContent='Synchronisé'}
-function setOff(){var p=document.getElementById('spill');p.className='spill off';document.getElementById('slbl').textContent=G.demo?'Mode démo':'Hors ligne'}
+var fbSource=null;          // EventSource SSE
+var fbRetryTimer=null;      // timer de reconnexion
+var fbRetryDelay=2000;      // délai initial de retry (ms)
+var fbInitialized=false;    // premier chargement reçu ?
+var fbLastTs={ev:0,td:0,an:0}; // timestamps des derniers items connus
 
-function syncFb(){
-  setOn();
-  fetchFb();
-  fbTimer=setInterval(fetchFb,5000);
+function setOn(rt){
+  var p=document.getElementById('spill');
+  p.className='spill';
+  document.getElementById('slbl').textContent=rt?'Temps réel ⚡':'Synchronisé';
+}
+function setOff(){
+  var p=document.getElementById('spill');
+  p.className='spill off';
+  document.getElementById('slbl').textContent=G.demo?'Mode démo':'Hors ligne';
+}
+function setConnecting(){
+  var p=document.getElementById('spill');
+  p.className='spill';
+  document.getElementById('slbl').textContent='Connexion…';
 }
 
-function fetchFb(){
+// ── POINT D'ENTRÉE SSE ──
+function syncFb(){
+  if(!('EventSource' in window)){
+    // Navigateur ancien : fallback polling 5 s
+    setOn(false);
+    _pollFb();
+    fbTimer=setInterval(_pollFb,5000);
+    return;
+  }
+  setConnecting();
+  _openSSE();
+}
+
+// ── OUVERTURE SSE ──
+function _openSSE(){
+  if(fbSource){fbSource.close();fbSource=null;}
+  if(fbRetryTimer){clearTimeout(fbRetryTimer);fbRetryTimer=null;}
+
+  var src=new EventSource(fbPath()+'.json');
+  fbSource=src;
+
+  // Snapshot complet (connexion initiale ou reconnexion)
+  src.addEventListener('put',function(e){
+    try{
+      var msg=JSON.parse(e.data);
+      _applyPut(msg.path,msg.data);
+      setOn(true);
+      fbRetryDelay=2000; // reset du backoff
+    }catch(err){console.error('SSE put:',err);}
+  });
+
+  // Mise à jour partielle (un seul nœud modifié)
+  src.addEventListener('patch',function(e){
+    try{
+      var msg=JSON.parse(e.data);
+      _applyPatch(msg.path,msg.data);
+      setOn(true);
+    }catch(err){console.error('SSE patch:',err);}
+  });
+
+  // Keep-alive Firebase (ignoré)
+  src.addEventListener('keep-alive',function(){});
+
+  // Accès révoqué ou règles Firebase
+  src.addEventListener('cancel',function(){
+    console.warn('SSE cancel – vérifiez les règles Firebase');
+    src.close();fbSource=null;
+    setOff();
+  });
+
+  src.onerror=function(){
+    // EventSource reconnecte automatiquement, mais on affiche l'état
+    setOff();
+    // Si la source est fermée (ex. cancel), on tente une reconnexion manuelle avec backoff
+    if(src.readyState===EventSource.CLOSED){
+      fbRetryDelay=Math.min(fbRetryDelay*2,60000);
+      fbRetryTimer=setTimeout(function(){
+        if(G.fb&&!G.demo)_openSSE();
+      },fbRetryDelay);
+    }
+  };
+}
+
+// ── APPLICATION D'UN SNAPSHOT COMPLET (put) ──
+function _applyPut(path,data){
   var prev={ev:G.events.length,td:G.todos.length,an:G.annivs.length};
-  fetch(fbPath()+'.json').then(function(r){return r.json()}).then(function(data){
+
+  if(path==='/'){
+    // Chargement initial complet
     G.events = data&&data.events ? Object.values(data.events) : [];
     G.todos  = data&&data.todos  ? Object.values(data.todos)  : [];
     G.annivs = data&&data.annivs ? Object.values(data.annivs) : [];
-    // Notify new partner events
-    if(G.events.length>prev.ev&&prev.ev>0){
-      var newest=G.events.sort(function(a,b){return b.ts-a.ts})[0];
-      if(newest&&newest.authorName!==G.n1){
-        var msg=newest.authorName+' a ajouté "'+newest.title+'"'+(newest.date?' le '+fmtFR(newest.date):'');
-        pushN('📅',msg,'À l\'instant');
-        showToast('📅 '+msg);
-        nativeNotif('💑 Notre Agenda',msg);
-      }
-    }
-    if(G.todos.length>prev.td&&prev.td>0){
-      var newest2=G.todos.sort(function(a,b){return b.ts-a.ts})[0];
-      if(newest2&&newest2.authorName!==G.n1){
-        var msg2=newest2.authorName+' a ajouté "'+newest2.text+'" à la todo';
-        pushN('✅',msg2,'À l\'instant');
-        nativeNotif('💑 Notre Agenda',msg2);
-      }
-    }
-    setOn();
-    renderCal();
-    if(G.sel)selDate(G.sel);
-    renderTodo();
-    renderAnniv();
-    updateTbdg();
-    updateAbdg();
-  }).catch(function(){setOff()});
+  } else if(path==='/events'){
+    G.events = data ? Object.values(data) : [];
+  } else if(path.startsWith('/events/')){
+    var eid=path.split('/')[2];
+    if(data===null){G.events=G.events.filter(function(e){return e.id!==eid});}
+    else{var ei=G.events.findIndex(function(e){return e.id===eid});if(ei>=0)G.events[ei]=data;else G.events.push(data);}
+  } else if(path==='/todos'){
+    G.todos = data ? Object.values(data) : [];
+  } else if(path.startsWith('/todos/')){
+    var tid=path.split('/')[2];
+    if(data===null){G.todos=G.todos.filter(function(t){return t.id!==tid});}
+    else{var ti=G.todos.findIndex(function(t){return t.id===tid});if(ti>=0)G.todos[ti]=data;else G.todos.push(data);}
+  } else if(path==='/annivs'){
+    G.annivs = data ? Object.values(data) : [];
+  } else if(path.startsWith('/annivs/')){
+    var aid=path.split('/')[2];
+    if(data===null){G.annivs=G.annivs.filter(function(a){return a.id!==aid});}
+    else{var ai=G.annivs.findIndex(function(a){return a.id===aid});if(ai>=0)G.annivs[ai]=data;else G.annivs.push(data);}
+  }
+
+  _afterSync(prev);
+}
+
+// ── APPLICATION D'UNE MISE À JOUR PARTIELLE (patch) ──
+function _applyPatch(path,data){
+  var prev={ev:G.events.length,td:G.todos.length,an:G.annivs.length};
+
+  if(path==='/'||path==='/events'){
+    if(data.events)Object.entries(data.events||{}).forEach(function(kv){
+      var ei=G.events.findIndex(function(e){return e.id===kv[0]});
+      if(ei>=0)Object.assign(G.events[ei],kv[1]);else G.events.push(kv[1]);
+    });
+    if(data.todos)Object.entries(data.todos||{}).forEach(function(kv){
+      var ti=G.todos.findIndex(function(t){return t.id===kv[0]});
+      if(ti>=0)Object.assign(G.todos[ti],kv[1]);else G.todos.push(kv[1]);
+    });
+    if(data.annivs)Object.entries(data.annivs||{}).forEach(function(kv){
+      var ai=G.annivs.findIndex(function(a){return a.id===kv[0]});
+      if(ai>=0)Object.assign(G.annivs[ai],kv[1]);else G.annivs.push(kv[1]);
+    });
+  }
+
+  _afterSync(prev);
+}
+
+// ── RENDU + NOTIFICATIONS APRÈS SYNC ──
+function _afterSync(prev){
+  // Notification si le partenaire a ajouté un événement
+  var newEvs=G.events.filter(function(e){return e.ts>fbLastTs.ev&&e.authorName!==G.n1});
+  newEvs.sort(function(a,b){return a.ts-b.ts}).forEach(function(e){
+    var msg=e.authorName+' a ajouté "'+e.title+'"'+(e.date?' le '+fmtFR(e.date):'');
+    pushN('📅',msg,'À l\'instant');showToast('📅 '+msg);nativeNotif('💑 Notre Agenda',msg);
+  });
+  var newTds=G.todos.filter(function(t){return t.ts>fbLastTs.td&&t.authorName!==G.n1&&!t.done});
+  newTds.sort(function(a,b){return a.ts-b.ts}).forEach(function(t){
+    var msg2=t.authorName+' a ajouté "'+t.text+'" à la todo';
+    pushN('✅',msg2,'À l\'instant');nativeNotif('💑 Notre Agenda',msg2);
+  });
+  var newAn=G.annivs.filter(function(a){return a.ts>fbLastTs.an&&a.authorName!==G.n1});
+  newAn.sort(function(a,b){return a.ts-b.ts}).forEach(function(a){
+    var msg3=a.authorName+' a ajouté l\'anniversaire de '+a.name;
+    pushN('🎂',msg3,'À l\'instant');nativeNotif('💑 Notre Agenda',msg3);
+  });
+
+  // Mémoriser les timestamps max pour la prochaine comparaison
+  G.events.forEach(function(e){if((e.ts||0)>fbLastTs.ev)fbLastTs.ev=e.ts;});
+  G.todos.forEach(function(t){if((t.ts||0)>fbLastTs.td)fbLastTs.td=t.ts;});
+  G.annivs.forEach(function(a){if((a.ts||0)>fbLastTs.an)fbLastTs.an=a.ts;});
+
+  saveLocal();
+  renderCal();
+  if(G.sel)selDate(G.sel);
+  renderTodo();
+  renderAnniv();
+  updateTbdg();
+  updateAbdg();
+  fbInitialized=true;
+}
+
+// ── FALLBACK POLLING (navigateurs sans EventSource) ──
+function _pollFb(){
+  var prev={ev:G.events.length,td:G.todos.length,an:G.annivs.length};
+  fetch(fbPath()+'.json').then(function(r){return r.json();}).then(function(data){
+    G.events=data&&data.events?Object.values(data.events):[];
+    G.todos=data&&data.todos?Object.values(data.todos):[];
+    G.annivs=data&&data.annivs?Object.values(data.annivs):[];
+    _afterSync(prev);
+    setOn(false);
+  }).catch(function(){setOff();});
 }
 
 function putFb(path,data){
   if(!G.fb||G.demo)return Promise.resolve();
-  return fetch(fbPath()+'/'+path+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(setOn).catch(setOff);
+  return fetch(fbPath()+'/'+path+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){setOn(!!fbSource);}).catch(setOff);
 }
 function delFb(path){
   if(!G.fb||G.demo)return Promise.resolve();
@@ -915,13 +1059,19 @@ function nativeNotif(title,body){
 }
 
 // ── REPRISE D'ACTIVITÉ ──
-// Quand l'utilisateur revient sur l'app (depuis un autre onglet, le bureau, etc.)
-// on relance les vérifications de rappels et la synchro Firebase.
 document.addEventListener('visibilitychange', function(){
   if(document.visibilityState==='visible' && G.n1){
     checkAnnivReminders();
     checkEvReminders();
-    if(G.fb && !G.demo){fetchFb();}
+    // Reconnecter le SSE s'il s'est fermé pendant que l'app était en arrière-plan
+    if(G.fb && !G.demo){
+      if(!fbSource || fbSource.readyState===EventSource.CLOSED){
+        _openSSE();
+      } else {
+        // SSE toujours actif : simple fetch de sécurité pour rattraper un éventuel gap
+        _pollFb();
+      }
+    }
     renderToday();
     updateAbdg();
     updateNbdg();
