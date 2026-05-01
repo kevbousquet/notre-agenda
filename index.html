@@ -44,8 +44,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .err{color:#c94a4a;font-size:.8rem;margin-top:.5rem;display:none}
 
 /* HEADER */
-.hdr{background:#fff;border-bottom:1px solid var(--border);padding:.85rem 1.25rem;padding-top:calc(.85rem + var(--st));display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.hdr h1{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--rose-d)}
+.hdr{background:linear-gradient(135deg,#3D1F2A 0%,#A84F61 100%);border-bottom:none;padding:.85rem 1.25rem;padding-top:calc(.85rem + var(--st));display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 12px rgba(61,31,42,.35)}
+.hdr h1{font-family:'Playfair Display',serif;font-size:1.1rem;color:#FAE8ED}
+.spill{display:flex;align-items:center;gap:.35rem;font-size:.65rem;color:#FAD4DC;padding:.28rem .6rem;background:rgba(255,255,255,.15);border-radius:20px}
+.spill.off{color:#FFAAB8;background:rgba(255,255,255,.1)}
+.sdot{width:5px;height:5px;border-radius:50%;background:#FAD4DC;flex-shrink:0}
+.ibtn{background:rgba(255,255,255,.15);border:none;border-radius:10px;width:34px;height:34px;font-size:1rem;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center}
+.ibtn:active{background:rgba(255,255,255,.25)}
+.abtn{background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:.4rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.abtn:active{background:rgba(255,255,255,.35)}
 .hr{display:flex;gap:.4rem;align-items:center}
 .spill{display:flex;align-items:center;gap:.35rem;font-size:.65rem;color:var(--sage);padding:.28rem .6rem;background:var(--sage-l);border-radius:20px}
 .sdot{width:5px;height:5px;background:var(--sage);border-radius:50%;animation:pulse 2s infinite}
@@ -57,7 +64,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .bdg{position:absolute;top:-5px;right:-5px;background:var(--rose);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:10px;display:none;align-items:center;justify-content:center;border:2px solid #fff;padding:0 2px}
 .abtn{padding:.45rem .85rem;background:var(--rose);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;cursor:pointer}
 .abtn:active{background:var(--rose-d)}
-.cbar{background:var(--sage-l);padding:.28rem 1.25rem;font-size:.66rem;color:var(--sage);text-align:center;flex-shrink:0}
+.cbar{background:#2C1820;padding:.28rem 1.25rem;font-size:.66rem;color:rgba(250,212,220,.7);text-align:center;flex-shrink:0}
 
 /* TABS */
 .tabs{display:flex;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -243,10 +250,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
   <header class="hdr">
     <h1 id="apptitle" style="display:flex;align-items:center;gap:7px">
       <svg width="26" height="20" viewBox="0 0 26 20" style="flex-shrink:0;overflow:visible">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="#D4788A" opacity="0.75" transform="translate(1.25,1.75) scale(0.5)"/>
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="#7A9E8E" opacity="0.75" transform="translate(8.25,1.75) scale(0.5)"/>
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="rgba(255,255,255,.65)" transform="translate(1.25,1.75) scale(0.5)"/>
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="rgba(255,255,255,.4)" transform="translate(8.25,1.75) scale(0.5)"/>
       </svg>
-      <span id="apptitle-text">Notre Agenda</span>
+      <span id="apptitle-text" style="color:#FAE8ED">Notre Agenda</span>
     </h1>
     <div class="hr">
       <div class="spill" id="spill"><span class="sdot"></span><span id="slbl">En ligne</span></div>
