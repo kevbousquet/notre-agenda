@@ -680,22 +680,24 @@ function _applyPatch(path,data){
 
 // ── RENDU + NOTIFICATIONS APRÈS SYNC ──
 function _afterSync(prev){
-  // Notification si le partenaire a ajouté un événement
-  var newEvs=G.events.filter(function(e){return e.ts>fbLastTs.ev&&e.authorName!==G.n1});
-  newEvs.sort(function(a,b){return a.ts-b.ts}).forEach(function(e){
-    var msg=e.authorName+' a ajouté "'+e.title+'"'+(e.date?' le '+fmtFR(e.date):'');
-    pushN('📅',msg,'À l\'instant');showToast('📅 '+msg);nativeNotif('Notre Agenda',msg);
-  });
-  var newTds=G.todos.filter(function(t){return t.ts>fbLastTs.td&&t.authorName!==G.n1&&!t.done});
-  newTds.sort(function(a,b){return a.ts-b.ts}).forEach(function(t){
-    var msg2=t.authorName+' a ajouté "'+t.text+'" à la todo';
-    pushN('✅',msg2,'À l\'instant');nativeNotif('Notre Agenda',msg2);
-  });
-  var newAn=G.annivs.filter(function(a){return a.ts>fbLastTs.an&&a.authorName!==G.n1});
-  newAn.sort(function(a,b){return a.ts-b.ts}).forEach(function(a){
-    var msg3=a.authorName+' a ajouté l\'anniversaire de '+a.name;
-    pushN('🎂',msg3,'À l\'instant');nativeNotif('Notre Agenda',msg3);
-  });
+  // Ne notifier que si l'app est déjà initialisée (pas au premier chargement)
+  if(fbInitialized){
+    var newEvs=G.events.filter(function(e){return e.ts>fbLastTs.ev&&e.authorName!==G.n1});
+    newEvs.sort(function(a,b){return a.ts-b.ts}).forEach(function(e){
+      var msg=e.authorName+' a ajouté "'+e.title+'"'+(e.date?' le '+fmtFR(e.date):'');
+      pushN('📅',msg,'À l\'instant');showToast('📅 '+msg);nativeNotif('Notre Agenda',msg);
+    });
+    var newTds=G.todos.filter(function(t){return t.ts>fbLastTs.td&&t.authorName!==G.n1&&!t.done});
+    newTds.sort(function(a,b){return a.ts-b.ts}).forEach(function(t){
+      var msg2=t.authorName+' a ajouté "'+t.text+'" à la todo';
+      pushN('✅',msg2,'À l\'instant');nativeNotif('Notre Agenda',msg2);
+    });
+    var newAn=G.annivs.filter(function(a){return a.ts>fbLastTs.an&&a.authorName!==G.n1});
+    newAn.sort(function(a,b){return a.ts-b.ts}).forEach(function(a){
+      var msg3=a.authorName+' a ajouté l\'anniversaire de '+a.name;
+      pushN('🎂',msg3,'À l\'instant');nativeNotif('Notre Agenda',msg3);
+    });
+  }
 
   // Mémoriser les timestamps max pour la prochaine comparaison
   G.events.forEach(function(e){if((e.ts||0)>fbLastTs.ev)fbLastTs.ev=e.ts;});
@@ -760,11 +762,16 @@ function loadLocal(){
       return {id:a.id,name:a.name||'',date:nd,type:a.type||'birthday',reminder:(a.reminder!=null?a.reminder:-1),note:a.note||'',authorName:a.authorName||G.n1,ts:a.ts||Date.now()};
     }).filter(function(a){return a!==null;});
     G.notifs=d.notifs||[];
+    if(d.fbLastTs){fbLastTs.ev=d.fbLastTs.ev||0;fbLastTs.td=d.fbLastTs.td||0;fbLastTs.an=d.fbLastTs.an||0;}
+    // Initialiser fbLastTs avec les timestamps max des données locales si pas encore fait
+    if(!fbLastTs.ev)G.events.forEach(function(e){if((e.ts||0)>fbLastTs.ev)fbLastTs.ev=e.ts;});
+    if(!fbLastTs.td)G.todos.forEach(function(t){if((t.ts||0)>fbLastTs.td)fbLastTs.td=t.ts;});
+    if(!fbLastTs.an)G.annivs.forEach(function(a){if((a.ts||0)>fbLastTs.an)fbLastTs.an=a.ts;});
     saveLocal();
   }catch(e){G.events=[];G.todos=[];G.annivs=[];G.notifs=[];}
 }
 function saveLocal(){
-  try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,annivs:G.annivs,notifs:G.notifs}))}catch(e){}
+  try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,annivs:G.annivs,notifs:G.notifs,fbLastTs:fbLastTs}))}catch(e){}
 }
 
 // ── TABS ──
