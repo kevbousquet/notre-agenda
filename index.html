@@ -532,11 +532,10 @@ function boot(){
   app.style.display='flex';
   document.getElementById('apptitle-text').textContent=G.n1+' & '+G.n2;
   document.getElementById('codelbl').textContent=G.code;
-  if(G.fb && !G.demo){syncFb();}else{setOff();}
+  if(G.fb && !G.demo){syncFb();}else{setOff();setTimeout(addDailyNotif,300);}
   checkPush();
   checkAnnivReminders();
   checkEvReminders();
-  addDailyNotif();
   addWeeklyNotif();
   renderCal();
   selDate(today());
@@ -803,6 +802,12 @@ function _afterSync(prev){
   updateTbdg();
   updateAbdg();
   updateCbdg();
+  // Notif quotidienne après le 1er sync Firebase (données réelles disponibles)
+  if(!fbInitialized){
+    addDailyNotif();
+    checkAnnivReminders();
+    checkEvReminders();
+  }
   fbInitialized=true;
 }
 
