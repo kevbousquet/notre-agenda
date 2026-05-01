@@ -125,6 +125,35 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .noev p{color:var(--sage);font-size:.88rem;line-height:1.5}
 
 /* TODO */
+/* ── LISTE DE COURSES ── */
+.cwrap{padding:1rem}
+.chdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem}
+.chdr h2{font-family:'Playfair Display',serif;font-size:1.2rem}
+.cstat{font-size:.75rem;color:var(--muted)}
+.crow{display:flex;gap:.5rem;margin-bottom:.5rem}
+.cinp{flex:1;padding:.65rem .9rem;border:1.5px solid var(--border);border-radius:14px;font-size:.9rem;font-family:inherit;background:#fff;color:var(--text);box-shadow:var(--shadow)}
+.cinp:focus{outline:none;border-color:var(--rose)}
+.ccat-sel{padding:.62rem .7rem;border:1.5px solid var(--border);border-radius:14px;font-size:.82rem;font-family:inherit;background:#fff;color:var(--text);cursor:pointer;box-shadow:var(--shadow)}
+.cabtn{background:var(--rose);color:#fff;border:none;border-radius:14px;padding:.65rem 1rem;font-size:.9rem;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.ccats{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.85rem}
+.ccatf{padding:.3rem .75rem;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:.75rem;cursor:pointer;font-family:inherit;color:var(--muted)}
+.ccatf.on{background:var(--rose-l);border-color:var(--rose);color:var(--rose-d);font-weight:600}
+.csect{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding:.5rem 0 .3rem;margin-top:.3rem;border-top:1px solid var(--border)}
+.csect:first-of-type{border-top:none;margin-top:0}
+.citem{display:flex;align-items:center;gap:.65rem;background:#fff;border-radius:14px;padding:.7rem .9rem;margin-bottom:.4rem;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:opacity .2s}
+.citem.done{opacity:.5}
+.cck{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;transition:all .15s}
+.cck.on{background:var(--sage);border-color:var(--sage);color:#fff}
+.ctxt{flex:1;font-size:.9rem;color:var(--text)}
+.citem.done .ctxt{text-decoration:line-through;color:var(--muted)}
+.ccat-ic{font-size:.8rem;background:var(--bg);padding:.1rem .45rem;border-radius:8px;color:var(--muted);flex-shrink:0}
+.cauth{font-size:.7rem;font-weight:600;flex-shrink:0}
+.cdel{background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:0 .15rem;line-height:1;flex-shrink:0}
+.cdel:active{color:var(--rose)}
+.cclrbtn{font-size:.78rem;padding:.35rem .8rem;border-radius:20px;border:1.5px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;font-family:inherit}
+.cempt{text-align:center;padding:2.5rem 1rem;color:var(--muted)}
+.cempt span{font-size:2.2rem;display:block;margin-bottom:.5rem}
+/* ── LISTE DE TÂCHES ── */
 .twrap{padding:1rem}
 .thdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
 .thdr h2{font-family:'Playfair Display',serif;font-size:1.2rem}
@@ -267,6 +296,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     <button class="tab on" id="tab-agenda" onclick="goTab('agenda')"><span class="tab-ic">📅</span>Agenda</button>
     <button class="tab" id="tab-anniv" onclick="goTab('anniv')"><span class="tab-ic">🎂</span>Anniv.<span class="tbdg" id="tbdg-anniv"></span></button>
     <button class="tab" id="tab-todo" onclick="goTab('todo')"><span class="tab-ic">✅</span>Todo<span class="tbdg" id="tbdg-todo"></span></button>
+    <button class="tab" id="tab-courses" onclick="goTab('courses')"><span class="tab-ic">🛒</span>Courses<span class="tbdg" id="tbdg-courses"></span></button>
   </div>
   <div id="main">
     <div class="pbanner" id="pbanner">
@@ -302,6 +332,41 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
         <div id="aupcoming"></div>
         <div class="astit" id="alistlbl">Tous les anniversaires</div>
         <div id="alist"></div>
+      </div>
+    </div>
+
+    <!-- COURSES -->
+    <div class="panel" id="panel-courses">
+      <div class="cwrap">
+        <div class="chdr">
+          <h2>Liste de courses 🛒</h2>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <span class="cstat" id="cstat"></span>
+            <button class="cclrbtn" onclick="clearDoneCourses()">Effacer cochés</button>
+          </div>
+        </div>
+        <div class="crow">
+          <input class="cinp" id="cinp" placeholder="Ex: Tomates, lait..." onkeydown="if(event.key==='Enter')addCourse()">
+          <select class="ccat-sel" id="ccat">
+            <option value="🥦 Fruits & Légumes">🥦</option>
+            <option value="🥖 Boulangerie">🥖</option>
+            <option value="🥩 Viandes & Poissons">🥩</option>
+            <option value="🧀 Produits laitiers">🧀</option>
+            <option value="🥫 Épicerie">🥫</option>
+            <option value="🧴 Hygiène & Entretien">🧴</option>
+            <option value="🍷 Boissons">🍷</option>
+            <option value="❄️ Surgelés">❄️</option>
+            <option value="🛍️ Autre">🛍️</option>
+          </select>
+          <button class="cabtn" onclick="addCourse()">+ Ajouter</button>
+        </div>
+        <div class="ccats">
+          <button class="ccatf on" onclick="filterC('all',this)">Tout</button>
+          <button class="ccatf" onclick="filterC('todo',this)">À prendre</button>
+          <button class="ccatf" onclick="filterC('done',this)">Cochés</button>
+          <button class="ccatf" onclick="filterC('mine',this)">Les miens</button>
+        </div>
+        <div id="clist"></div>
       </div>
     </div>
 
@@ -408,9 +473,9 @@ const AL={birthday:'Anniversaire',wedding:'Anniv. mariage',other:'Annuel'};
 // ── STATE ──
 var G = {
   n1:'', n2:'', code:'', fb:'', demo:false,
-  events:[], todos:[], annivs:[], notifs:[],
+  events:[], todos:[], annivs:[], notifs:[], courses:[],
   mo: new Date().getMonth(), yr: new Date().getFullYear(),
-  sel: null, tab:'agenda', tf:'all'
+  sel: null, tab:'agenda', tf:'all', cf:'all'
 };
 var fbTimer = null, swReg = null;
 
@@ -477,9 +542,11 @@ function boot(){
   selDate(today());
   renderTodo();
   renderAnniv();
+  renderCourses();
   updateNbdg();
   updateTbdg();
   updateAbdg();
+  updateCbdg();
   regSW();
 }
 
@@ -550,7 +617,7 @@ var fbSource=null;          // EventSource SSE
 var fbRetryTimer=null;      // timer de reconnexion
 var fbRetryDelay=2000;      // délai initial de retry (ms)
 var fbInitialized=false;    // premier chargement reçu ?
-var fbLastTs={ev:0,td:0,an:0}; // timestamps des derniers items connus
+var fbLastTs={ev:0,td:0,an:0,cr:0}; // timestamps des derniers items connus
 
 function setOn(rt){
   var p=document.getElementById('spill');
@@ -658,6 +725,12 @@ function _applyPut(path,data){
     var aid=path.split('/')[2];
     if(data===null){G.annivs=G.annivs.filter(function(a){return a.id!==aid});}
     else{var ai=G.annivs.findIndex(function(a){return a.id===aid});if(ai>=0)G.annivs[ai]=data;else G.annivs.push(data);}
+  } else if(path==='/courses'){
+    G.courses = data ? Object.values(data) : [];
+  } else if(path.startsWith('/courses/')){
+    var cid=path.split('/')[2];
+    if(data===null){G.courses=G.courses.filter(function(c){return c.id!==cid});}
+    else{var ci=G.courses.findIndex(function(c){return c.id===cid});if(ci>=0)G.courses[ci]=data;else G.courses.push(data);}
   }
 
   _afterSync(prev);
@@ -676,7 +749,10 @@ function _applyPatch(path,data){
       var ti=G.todos.findIndex(function(t){return t.id===kv[0]});
       if(ti>=0)Object.assign(G.todos[ti],kv[1]);else G.todos.push(kv[1]);
     });
-    if(data.annivs)Object.entries(data.annivs||{}).forEach(function(kv){
+    if(data.courses)Object.entries(data.courses||{}).forEach(function(kv){
+      var ci=G.courses.findIndex(function(c){return c.id===kv[0]});
+      if(ci>=0)Object.assign(G.courses[ci],kv[1]);else G.courses.push(kv[1]);
+    });
       var ai=G.annivs.findIndex(function(a){return a.id===kv[0]});
       if(ai>=0)Object.assign(G.annivs[ai],kv[1]);else G.annivs.push(kv[1]);
     });
@@ -699,7 +775,11 @@ function _afterSync(prev){
       var msg2=t.authorName+' a ajouté "'+t.text+'" à la todo';
       pushN('✅',msg2,'À l\'instant');nativeNotif('Notre Agenda',msg2);
     });
-    var newAn=G.annivs.filter(function(a){return a.ts>fbLastTs.an&&a.authorName!==G.n1});
+    var newCrs=G.courses.filter(function(c){return c.ts>fbLastTs.cr&&c.authorName!==G.n1&&!c.done});
+    newCrs.sort(function(a,b){return a.ts-b.ts}).forEach(function(c){
+      var msg4=c.authorName+' a ajouté "'+c.name+'" à la liste de courses';
+      pushN('🛒',msg4,'À l\'instant');nativeNotif('Notre Agenda',msg4);
+    });
     newAn.sort(function(a,b){return a.ts-b.ts}).forEach(function(a){
       var msg3=a.authorName+' a ajouté l\'anniversaire de '+a.name;
       pushN('🎂',msg3,'À l\'instant');nativeNotif('Notre Agenda',msg3);
@@ -710,14 +790,17 @@ function _afterSync(prev){
   G.events.forEach(function(e){if((e.ts||0)>fbLastTs.ev)fbLastTs.ev=e.ts;});
   G.todos.forEach(function(t){if((t.ts||0)>fbLastTs.td)fbLastTs.td=t.ts;});
   G.annivs.forEach(function(a){if((a.ts||0)>fbLastTs.an)fbLastTs.an=a.ts;});
+  G.courses.forEach(function(c){if((c.ts||0)>fbLastTs.cr)fbLastTs.cr=c.ts;});
 
   saveLocal();
   renderCal();
   if(G.sel)selDate(G.sel);
   renderTodo();
   renderAnniv();
+  renderCourses();
   updateTbdg();
   updateAbdg();
+  updateCbdg();
   fbInitialized=true;
 }
 
@@ -769,7 +852,8 @@ function loadLocal(){
       return {id:a.id,name:a.name||'',date:nd,type:a.type||'birthday',reminder:(a.reminder!=null?a.reminder:-1),note:a.note||'',authorName:a.authorName||G.n1,ts:a.ts||Date.now()};
     }).filter(function(a){return a!==null;});
     G.notifs=d.notifs||[];
-    if(d.fbLastTs){fbLastTs.ev=d.fbLastTs.ev||0;fbLastTs.td=d.fbLastTs.td||0;fbLastTs.an=d.fbLastTs.an||0;}
+    G.courses=d.courses||[];
+    if(d.fbLastTs){fbLastTs.ev=d.fbLastTs.ev||0;fbLastTs.td=d.fbLastTs.td||0;fbLastTs.an=d.fbLastTs.an||0;fbLastTs.cr=d.fbLastTs.cr||0;}
     // Initialiser fbLastTs avec les timestamps max des données locales si pas encore fait
     if(!fbLastTs.ev)G.events.forEach(function(e){if((e.ts||0)>fbLastTs.ev)fbLastTs.ev=e.ts;});
     if(!fbLastTs.td)G.todos.forEach(function(t){if((t.ts||0)>fbLastTs.td)fbLastTs.td=t.ts;});
@@ -778,7 +862,7 @@ function loadLocal(){
   }catch(e){G.events=[];G.todos=[];G.annivs=[];G.notifs=[];}
 }
 function saveLocal(){
-  try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,annivs:G.annivs,notifs:G.notifs,fbLastTs:fbLastTs}))}catch(e){}
+  try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,annivs:G.annivs,notifs:G.notifs,courses:G.courses,fbLastTs:fbLastTs}))}catch(e){}
 }
 
 // ── TABS ──
@@ -788,7 +872,7 @@ function goTab(t){
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('on')});
   document.getElementById('tab-'+t).classList.add('on');
   document.getElementById('panel-'+t).classList.add('on');
-  var lbl={agenda:'+ Ajouter',anniv:'+ Anniv.',todo:'+ Tâche'};
+  var lbl={agenda:'+ Ajouter',anniv:'+ Anniv.',todo:'+ Tâche',courses:'+ Article'};
   document.getElementById('addbtn').textContent=lbl[t]||'+ Ajouter';
 }
 function clickAdd(){
@@ -798,6 +882,7 @@ function clickAdd(){
     openM('mev');
   }
   else if(G.tab==='anniv'){_resetAnnivModal();openM('mann');}
+  else if(G.tab==='courses'){document.getElementById('cinp').focus();document.getElementById('cinp').scrollIntoView({behavior:'smooth'});}
   else{document.getElementById('tinp').focus();document.getElementById('tinp').scrollIntoView({behavior:'smooth'});}
 }
 
@@ -915,6 +1000,85 @@ function delEv(id){
   G.events=G.events.filter(function(e){return e.id!==id});
   delFb('events/'+id);saveLocal();
   renderCal();if(G.sel)selDate(G.sel);
+}
+
+// ── LISTE DE COURSES ──
+var CC_ICONS={'🥦 Fruits & Légumes':'🥦','🥖 Boulangerie':'🥖','🥩 Viandes & Poissons':'🥩','🧀 Produits laitiers':'🧀','🥫 Épicerie':'🥫','🧴 Hygiène & Entretien':'🧴','🍷 Boissons':'🍷','❄️ Surgelés':'❄️','🛍️ Autre':'🛍️'};
+
+function addCourse(){
+  var name=document.getElementById('cinp').value.trim();
+  if(!name)return;
+  var cat=document.getElementById('ccat').value;
+  var c={id:Date.now().toString(),name:name,cat:cat,done:false,authorName:G.n1,ts:Date.now()};
+  G.courses.push(c);
+  document.getElementById('cinp').value='';
+  pushN('🛒',G.n1+' a ajouté "'+name+'" à la liste de courses','À l\'instant');
+  putFb('courses/'+c.id,c);saveLocal();
+  renderCourses();updateCbdg();
+}
+function toggleCourse(id){
+  var c=G.courses.find(function(c){return c.id===id});
+  if(!c)return;c.done=!c.done;
+  putFb('courses/'+id,c);saveLocal();
+  renderCourses();updateCbdg();
+}
+function delCourse(id){
+  G.courses=G.courses.filter(function(c){return c.id!==id});
+  delFb('courses/'+id);saveLocal();
+  renderCourses();updateCbdg();
+}
+function clearDoneCourses(){
+  var done=G.courses.filter(function(c){return c.done});
+  if(!done.length){showToast('Aucun article coché à effacer');return;}
+  done.forEach(function(c){delFb('courses/'+c.id);});
+  G.courses=G.courses.filter(function(c){return!c.done});
+  saveLocal();renderCourses();updateCbdg();
+  showToast('✅ Articles cochés effacés');
+}
+function filterC(f,btn){
+  G.cf=f;
+  document.querySelectorAll('.ccatf').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');renderCourses();
+}
+function renderCourses(){
+  var all=G.courses.slice().sort(function(a,b){
+    if(a.done!==b.done)return a.done?1:-1;
+    return a.cat.localeCompare(b.cat)||a.ts-b.ts;
+  });
+  var total=all.length,done=all.filter(function(c){return c.done}).length;
+  var rest=total-done;
+  document.getElementById('cstat').textContent=total?(rest?' '+rest+' restant'+(rest>1?'s':''):'Tout coché ✓'):'';
+  var list=all;
+  if(G.cf==='todo')list=all.filter(function(c){return!c.done});
+  else if(G.cf==='done')list=all.filter(function(c){return c.done});
+  else if(G.cf==='mine')list=all.filter(function(c){return c.authorName===G.n1});
+  var el=document.getElementById('clist');
+  if(!list.length){
+    el.innerHTML='<div class="cempt"><span>'+(G.cf==='done'?'🎉':'🛒')+'</span><p>'+(G.cf==='done'?'Aucun article coché':'Liste vide — à vos courses !')+'</p></div>';
+    return;
+  }
+  // Grouper par catégorie
+  var groups={};
+  list.forEach(function(c){if(!groups[c.cat])groups[c.cat]=[];groups[c.cat].push(c);});
+  var html='';
+  Object.keys(groups).sort().forEach(function(cat){
+    var ico=CC_ICONS[cat]||'🛍️';
+    html+='<div class="csect">'+cat+'</div>';
+    html+=groups[cat].map(function(c){
+      return '<div class="citem'+(c.done?' done':'')+'">'+
+        '<button class="cck'+(c.done?' on':'')+'" onclick="toggleCourse(\''+c.id+'\')">'+(c.done?'✓':'')+'</button>'+
+        '<span class="ctxt">'+c.name+'</span>'+
+        '<span class="cauth" style="color:'+(c.authorName===G.n1?'var(--rose)':'var(--sage)')+'">'+( c.authorName===G.n1?'Moi':c.authorName)+'</span>'+
+        '<button class="cdel" onclick="delCourse(\''+c.id+'\')">✕</button>'+
+      '</div>';
+    }).join('');
+  });
+  el.innerHTML=html;
+}
+function updateCbdg(){
+  var n=G.courses.filter(function(c){return!c.done}).length;
+  var b=document.getElementById('tbdg-courses');
+  b.textContent=n>9?'9+':n;b.classList.toggle('on',n>0);
 }
 
 // ── TODO ──
