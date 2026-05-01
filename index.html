@@ -753,6 +753,7 @@ function _applyPatch(path,data){
       var ci=G.courses.findIndex(function(c){return c.id===kv[0]});
       if(ci>=0)Object.assign(G.courses[ci],kv[1]);else G.courses.push(kv[1]);
     });
+    if(data.annivs)Object.entries(data.annivs||{}).forEach(function(kv){
       var ai=G.annivs.findIndex(function(a){return a.id===kv[0]});
       if(ai>=0)Object.assign(G.annivs[ai],kv[1]);else G.annivs.push(kv[1]);
     });
@@ -780,6 +781,7 @@ function _afterSync(prev){
       var msg4=c.authorName+' a ajouté "'+c.name+'" à la liste de courses';
       pushN('🛒',msg4,'À l\'instant');nativeNotif('Notre Agenda',msg4);
     });
+    var newAn=G.annivs.filter(function(a){return a.ts>fbLastTs.an&&a.authorName!==G.n1});
     newAn.sort(function(a,b){return a.ts-b.ts}).forEach(function(a){
       var msg3=a.authorName+' a ajouté l\'anniversaire de '+a.name;
       pushN('🎂',msg3,'À l\'instant');nativeNotif('Notre Agenda',msg3);
