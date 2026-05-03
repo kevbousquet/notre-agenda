@@ -552,18 +552,29 @@ function boot(){
 // ── AUTO LOGIN ──
 (function(){
   var raw, c;
-  // Étape 1 : lecture + parsing JSON — seule cette étape justifie d'effacer la config
   try{
     raw=localStorage.getItem('ag_cfg');
     if(!raw)return;
     c=JSON.parse(raw);
   }catch(e){
-    // JSON corrompu → on efface et on montre l'écran d'accueil
     try{localStorage.removeItem('ag_cfg')}catch(x){}
     return;
   }
   if(!c||!c.n1||!c.code)return;
-  // Étape 2 : démarrage de l'app — une erreur ici ne doit JAMAIS effacer la session
+
+  // Protection anti-boucle : si on a rechargé plus de 3 fois en 10s, on s'arrête
+  var now=Date.now();
+  var reloads=JSON.parse(sessionStorage.getItem('_reloads')||'[]');
+  reloads=reloads.filter(function(t){return now-t<10000});
+  reloads.push(now);
+  sessionStorage.setItem('_reloads',JSON.stringify(reloads));
+  if(reloads.length>3){
+    sessionStorage.removeItem('_reloads');
+    var err=document.getElementById('errmsg');
+    if(err){err.textContent='Erreur de démarrage répétée. Vérifiez votre connexion.';err.style.display='block';}
+    return; // On n'efface PAS ag_cfg — la session est préservée
+  }
+
   try{
     G.n1=c.n1; G.n2=c.n2||''; G.code=c.code; G.fb=c.fb||''; G.demo=false;
     document.getElementById('n1').value=G.n1;
@@ -571,10 +582,11 @@ function boot(){
     document.getElementById('scode').value=G.code;
     if(G.fb)document.getElementById('fburl').value=G.fb;
     boot();
+    sessionStorage.removeItem('_reloads'); // boot réussi → reset compteur
   }catch(e){
-    // On recharge la page sans toucher à ag_cfg pour réessayer proprement
     console.error('Erreur boot:', e);
-    setTimeout(function(){location.reload();}, 500);
+    // Un seul reload autorisé, protégé par le compteur ci-dessus
+    setTimeout(function(){location.reload();},800);
   }
 })();
 
@@ -685,15 +697,16 @@ function _openSSE(){
   });
 
   src.onerror=function(){
-    // EventSource reconnecte automatiquement, mais on affiche l'état
     setOff();
-    // Si la source est fermée (ex. cancel), on tente une reconnexion manuelle avec backoff
     if(src.readyState===EventSource.CLOSED){
+      // Connexion définitivement fermée (ex: cancel) → backoff manuel
+      fbSource=null;
       fbRetryDelay=Math.min(fbRetryDelay*2,60000);
       fbRetryTimer=setTimeout(function(){
         if(G.fb&&!G.demo)_openSSE();
       },fbRetryDelay);
     }
+    // Si readyState===CONNECTING, EventSource reconnecte seul → on n'interfère pas
   };
 }
 
@@ -1395,14 +1408,16 @@ document.addEventListener('visibilitychange', function(){
     checkAnnivReminders();
     checkEvReminders();
     addWeeklyNotif();
-    // Reconnecter le SSE s'il s'est fermé pendant que l'app était en arrière-plan
     if(G.fb && !G.demo){
       if(!fbSource || fbSource.readyState===EventSource.CLOSED){
+        // SSE mort → rouvrir
+        fbRetryDelay=2000;
         _openSSE();
-      } else {
-        // SSE toujours actif : simple fetch de sécurité pour rattraper un éventuel gap
+      } else if(fbSource.readyState===EventSource.OPEN){
+        // SSE vivant → juste un poll de rattrapage léger
         _pollFb();
       }
+      // Si CONNECTING, on ne fait rien — la reconnexion est en cours
     }
     renderToday();
     updateAbdg();
