@@ -551,6 +551,9 @@ function boot(){
 
 // ── AUTO LOGIN ──
 (function(){
+  // Nettoyer tout résidu de l'ancien compteur anti-boucle
+  sessionStorage.removeItem('_reloads');
+
   var raw, c;
   try{
     raw=localStorage.getItem('ag_cfg');
@@ -562,19 +565,6 @@ function boot(){
   }
   if(!c||!c.n1||!c.code)return;
 
-  // Protection anti-boucle : si on a rechargé plus de 3 fois en 10s, on s'arrête
-  var now=Date.now();
-  var reloads=JSON.parse(sessionStorage.getItem('_reloads')||'[]');
-  reloads=reloads.filter(function(t){return now-t<10000});
-  reloads.push(now);
-  sessionStorage.setItem('_reloads',JSON.stringify(reloads));
-  if(reloads.length>3){
-    sessionStorage.removeItem('_reloads');
-    var err=document.getElementById('errmsg');
-    if(err){err.textContent='Erreur de démarrage répétée. Vérifiez votre connexion.';err.style.display='block';}
-    return; // On n'efface PAS ag_cfg — la session est préservée
-  }
-
   try{
     G.n1=c.n1; G.n2=c.n2||''; G.code=c.code; G.fb=c.fb||''; G.demo=false;
     document.getElementById('n1').value=G.n1;
@@ -582,11 +572,11 @@ function boot(){
     document.getElementById('scode').value=G.code;
     if(G.fb)document.getElementById('fburl').value=G.fb;
     boot();
-    sessionStorage.removeItem('_reloads'); // boot réussi → reset compteur
   }catch(e){
+    // Erreur au boot : on affiche un message sans recharger ni déconnecter
     console.error('Erreur boot:', e);
-    // Un seul reload autorisé, protégé par le compteur ci-dessus
-    setTimeout(function(){location.reload();},800);
+    var err=document.getElementById('errmsg');
+    if(err){err.textContent='Erreur de démarrage. Rechargez la page.';err.style.display='block';}
   }
 })();
 
