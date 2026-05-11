@@ -103,10 +103,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .cday:active{background:var(--rose-l)}
 .cday.tod{background:var(--rose);color:#fff;font-weight:600}
 .cday.sel:not(.tod){background:var(--sage-l);color:var(--sage);font-weight:600}
-.cday.hev::after{content:'';position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:var(--rose)}
-.cday.tod.hev::after{background:rgba(255,255,255,.7)}
-.cday.hav:not(.hev)::after{content:'';position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:#F5A623}
-.cday.tod.hav:not(.hev)::after{background:rgba(255,255,255,.7)}
+.cday.hav-dot{position:absolute;bottom:2px;width:6px;height:6px;border-radius:50%;background:#F5A623}
 .cday.hspan{background:rgba(212,120,138,.15);border-radius:0;color:var(--rose-d)}
 .cday.hspan-start{background:rgba(212,120,138,.2);border-radius:8px 0 0 8px;color:var(--rose-d);font-weight:600}
 .cday.hspan-end{background:rgba(212,120,138,.2);border-radius:0 8px 8px 0;color:var(--rose-d);font-weight:600}
@@ -117,20 +114,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 /* EVENTS */
 .evwrap{margin:0 1rem}
 .evtitle{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:.75rem}
-.evc{background:#fff;border-radius:14px;padding:.9rem 1rem;box-shadow:0 2px 10px rgba(44,43,43,.06);border-left:4px solid var(--rose);display:flex;gap:.8rem;align-items:flex-start;margin-bottom:.6rem}
-.evc.pt{border-left-color:var(--sage)}
-/* Couleurs par catégorie */
-.evc.cat-famille{border-left-color:#E8845A}
-.evc.cat-loisir{border-left-color:#9B72CF}
-.evc.cat-sante{border-left-color:#4EA8A0}
-.evc.cat-travail{border-left-color:#5B8DD9}
-.evc.cat-autre{border-left-color:#D4788A}
-/* Dots calendrier par catégorie */
-.cday.hev-famille::after{background:#E8845A}
-.cday.hev-loisir::after{background:#9B72CF}
-.cday.hev-sante::after{background:#4EA8A0}
-.cday.hev-travail::after{background:#5B8DD9}
-.cday.hev-autre::after{background:#D4788A}
+.evc{background:#FDF0EA;border-radius:14px;padding:.9rem 1rem;box-shadow:0 2px 10px rgba(44,43,43,.04);border-left:none;display:flex;gap:.8rem;align-items:flex-start;margin-bottom:.6rem}
+.evc.pt{}
+/* Fonds doux par catégorie */
+.evc.cat-famille{background:#FDF0EA}
+.evc.cat-loisir{background:#F3EDFC}
+.evc.cat-sante{background:#E8F6F5}
+.evc.cat-travail{background:#EBF1FB}
+.evc.cat-autre{background:#FCF0F2}
+/* Dots calendrier — points multiples */
+.cday .dots{display:flex;gap:2px;justify-content:center;position:absolute;bottom:2px;left:0;right:0}
+.cday .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cday.tod .dot{opacity:.85}
 /* Badge catégorie dans la carte */
 .catbdg{display:inline-flex;align-items:center;gap:3px;font-size:.7rem;font-weight:600;padding:.15rem .55rem;border-radius:20px}
 .catbdg-famille{background:#FDF0EA;color:#B85D32}
@@ -949,10 +944,11 @@ function renderCal(){
   var days=new Date(G.yr,G.mo+1,0).getDate();
   var prev=new Date(G.yr,G.mo,0).getDate();
   var td=today();
-  // Événements ponctuels — on garde la catégorie dominante du jour
+  // Événements ponctuels — groupés par jour avec leurs catégories
   var evDayMap={};
   G.events.filter(function(e){return !e.dateEnd}).forEach(function(e){
-    if(!evDayMap[e.date])evDayMap[e.date]=e.cat||'autre';
+    if(!evDayMap[e.date])evDayMap[e.date]=[];
+    evDayMap[e.date].push(e.cat||'autre');
   });
   // Plages multi-jours
   var spans=G.events.filter(function(e){return e.dateEnd && e.dateEnd>e.date});
@@ -965,8 +961,31 @@ function renderCal(){
     var d=document.createElement('div');d.className='cday';
     if(ds===td)d.classList.add('tod');
     if(ds===G.sel)d.classList.add('sel');
-    if(evDayMap[ds]){d.classList.add('hev');d.classList.add('hev-'+(evDayMap[ds]||'autre'));}
-    if(annivD.has(ds))d.classList.add('hav');
+    if(evDayMap[ds]){
+      d.classList.add('hev');
+      var dotsEl=document.createElement('div');dotsEl.className='dots';
+      // Max 3 points, dédupliqués par catégorie
+      var cats=evDayMap[ds].filter(function(c,i,a){return a.indexOf(c)===i}).slice(0,3);
+      cats.forEach(function(cat){
+        var dot=document.createElement('span');dot.className='dot';
+        dot.style.background=CC[cat]||'var(--rose)';
+        dotsEl.appendChild(dot);
+      });
+      d.appendChild(dotsEl);
+    }
+    // Point anniversaire
+    if(annivD.has(ds)&&!evDayMap[ds]){
+      var dotsEl2=document.createElement('div');dotsEl2.className='dots';
+      var aDot=document.createElement('span');aDot.className='dot';aDot.style.background='#F5A623';
+      dotsEl2.appendChild(aDot);d.appendChild(dotsEl2);
+    } else if(annivD.has(ds)&&evDayMap[ds]){
+      // Ajouter un point orange aux points existants
+      var existingDots=d.querySelector('.dots');
+      if(existingDots&&existingDots.children.length<3){
+        var aDot2=document.createElement('span');aDot2.className='dot';aDot2.style.background='#F5A623';
+        existingDots.appendChild(aDot2);
+      }
+    }
     // Marquer les plages multi-jours
     spans.forEach(function(ev){
       var cat=ev.cat||'autre';
@@ -1021,15 +1040,17 @@ function selDate(ds){
   html+=evs.map(function(ev){
     var cat=ev.cat||'autre';
     var col=CC[cat]||'var(--rose)';
+    var bgMap={famille:'#FDF0EA',loisir:'#F3EDFC',sante:'#E8F6F5',travail:'#EBF1FB',autre:'#FCF0F2'};
+    var bg=bgMap[cat]||'#FCF0F2';
     var duree='';
     if(ev.dateEnd){
       var d1=new Date(ev.date),d2=new Date(ev.dateEnd);
       var jours=Math.round((d2-d1)/(86400000))+1;
       duree='<span>📆 '+fmtFR(ev.date)+' → '+fmtFR(ev.dateEnd)+' ('+jours+'j)</span>';
     }
-    return '<div class="evc" onclick="editEv(\''+ev.id+'\')" style="cursor:pointer;border-left-color:'+col+'">'
-      +'<div class="evt" style="color:'+col+'">'+(ev.dateEnd?'📆':(ev.time||'Toute la j.'))+'</div>'
-      +'<div class="evb"><div class="evn">'+(CE[cat]||'📌')+' '+ev.title+'</div>'
+    return '<div class="evc" onclick="editEv(\''+ev.id+'\')" style="cursor:pointer;background:'+bg+';border-left:none">'
+      +'<div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0">'+(CE[cat]||'📌')+'</div>'
+      +'<div class="evb" style="flex:1"><div class="evn" style="color:'+col+'">'+(ev.time?'<span style="font-size:.75rem;font-weight:700;margin-right:4px">'+ev.time+'</span>':'')+ev.title+'</div>'
       +'<div class="evm">'
       +'<span class="catbdg catbdg-'+cat+'">'+(CL[cat]||'Autre')+'</span>'
       +'<span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span>'
