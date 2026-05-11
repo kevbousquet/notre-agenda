@@ -119,6 +119,31 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .evtitle{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:.75rem}
 .evc{background:#fff;border-radius:14px;padding:.9rem 1rem;box-shadow:0 2px 10px rgba(44,43,43,.06);border-left:4px solid var(--rose);display:flex;gap:.8rem;align-items:flex-start;margin-bottom:.6rem}
 .evc.pt{border-left-color:var(--sage)}
+/* Couleurs par catégorie */
+.evc.cat-famille{border-left-color:#E8845A}
+.evc.cat-loisir{border-left-color:#9B72CF}
+.evc.cat-sante{border-left-color:#4EA8A0}
+.evc.cat-travail{border-left-color:#5B8DD9}
+.evc.cat-autre{border-left-color:#D4788A}
+/* Dots calendrier par catégorie */
+.cday.hev-famille::after{background:#E8845A}
+.cday.hev-loisir::after{background:#9B72CF}
+.cday.hev-sante::after{background:#4EA8A0}
+.cday.hev-travail::after{background:#5B8DD9}
+.cday.hev-autre::after{background:#D4788A}
+/* Badge catégorie dans la carte */
+.catbdg{display:inline-flex;align-items:center;gap:3px;font-size:.7rem;font-weight:600;padding:.15rem .55rem;border-radius:20px}
+.catbdg-famille{background:#FDF0EA;color:#B85D32}
+.catbdg-loisir{background:#F3EDFC;color:#6B47A8}
+.catbdg-sante{background:#E8F6F5;color:#2E7A74}
+.catbdg-travail{background:#EBF1FB;color:#2E5FAA}
+.catbdg-autre{background:#FCF0F2;color:#A84F61}
+/* Plages multi-jours par catégorie */
+.hspan-famille,.hspan-start-famille,.hspan-end-famille{background:rgba(232,132,90,.15)!important}
+.hspan-loisir,.hspan-start-loisir,.hspan-end-loisir{background:rgba(155,114,207,.15)!important}
+.hspan-sante,.hspan-start-sante,.hspan-end-sante{background:rgba(78,168,160,.15)!important}
+.hspan-travail,.hspan-start-travail,.hspan-end-travail{background:rgba(91,141,217,.15)!important}
+.hspan-autre,.hspan-start-autre,.hspan-end-autre{background:rgba(212,120,138,.15)!important}
 .evt{font-size:.72rem;font-weight:500;color:var(--muted);white-space:nowrap;min-width:45px;padding-top:2px}
 .evb{flex:1}
 .evn{font-size:.9rem;font-weight:500;margin-bottom:.2rem}
@@ -476,6 +501,7 @@ const MO=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Se
 const MOS=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const CE={famille:'👨‍👩‍👧',loisir:'🎭',sante:'🏥',travail:'💼',autre:'📌'};
 const CL={famille:'Famille',loisir:'Loisir',sante:'Santé',travail:'Travail',autre:'Autre'};
+const CC={famille:'#E8845A',loisir:'#9B72CF',sante:'#4EA8A0',travail:'#5B8DD9',autre:'#D4788A'};
 const AT={birthday:'🎂',wedding:'💍',other:'🎉'};
 const AL={birthday:'Anniversaire',wedding:'Anniv. mariage',other:'Annuel'};
 
@@ -718,6 +744,7 @@ function _applyPut(path,data){
     G.events = data&&data.events ? Object.values(data.events) : [];
     G.todos  = data&&data.todos  ? Object.values(data.todos)  : [];
     G.annivs = data&&data.annivs ? Object.values(data.annivs) : [];
+    G.courses= data&&data.courses? Object.values(data.courses): [];
   } else if(path==='/events'){
     G.events = data ? Object.values(data) : [];
   } else if(path.startsWith('/events/')){
@@ -751,7 +778,7 @@ function _applyPut(path,data){
 function _applyPatch(path,data){
   var prev={ev:G.events.length,td:G.todos.length,an:G.annivs.length};
 
-  if(path==='/'||path==='/events'){
+  if(path==='/'||path==='/events'||path==='/todos'||path==='/courses'||path==='/annivs'){
     if(data.events)Object.entries(data.events||{}).forEach(function(kv){
       var ei=G.events.findIndex(function(e){return e.id===kv[0]});
       if(ei>=0)Object.assign(G.events[ei],kv[1]);else G.events.push(kv[1]);
@@ -768,6 +795,12 @@ function _applyPatch(path,data){
       var ai=G.annivs.findIndex(function(a){return a.id===kv[0]});
       if(ai>=0)Object.assign(G.annivs[ai],kv[1]);else G.annivs.push(kv[1]);
     });
+    // Si patch direct sur un nœud (ex: /courses/id123)
+    if(path.startsWith('/courses/')&&!data.courses){
+      var cid2=path.split('/')[2];
+      var ci2=G.courses.findIndex(function(c){return c.id===cid2});
+      if(ci2>=0)Object.assign(G.courses[ci2],data);else G.courses.push(data);
+    }
   }
 
   _afterSync(prev);
@@ -827,9 +860,10 @@ function _afterSync(prev){
 function _pollFb(){
   var prev={ev:G.events.length,td:G.todos.length,an:G.annivs.length};
   fetch(fbPath()+'.json').then(function(r){return r.json();}).then(function(data){
-    G.events=data&&data.events?Object.values(data.events):[];
-    G.todos=data&&data.todos?Object.values(data.todos):[];
-    G.annivs=data&&data.annivs?Object.values(data.annivs):[];
+    G.events =data&&data.events ?Object.values(data.events) :[];
+    G.todos  =data&&data.todos  ?Object.values(data.todos)  :[];
+    G.annivs =data&&data.annivs ?Object.values(data.annivs) :[];
+    G.courses=data&&data.courses?Object.values(data.courses):[];
     _afterSync(prev);
     setOn(false);
   }).catch(function(){setOff();});
@@ -915,8 +949,11 @@ function renderCal(){
   var days=new Date(G.yr,G.mo+1,0).getDate();
   var prev=new Date(G.yr,G.mo,0).getDate();
   var td=today();
-  // Événements ponctuels
-  var evD=new Set(G.events.filter(function(e){return !e.dateEnd}).map(function(e){return e.date}));
+  // Événements ponctuels — on garde la catégorie dominante du jour
+  var evDayMap={};
+  G.events.filter(function(e){return !e.dateEnd}).forEach(function(e){
+    if(!evDayMap[e.date])evDayMap[e.date]=e.cat||'autre';
+  });
   // Plages multi-jours
   var spans=G.events.filter(function(e){return e.dateEnd && e.dateEnd>e.date});
   // Anniversaires
@@ -928,14 +965,16 @@ function renderCal(){
     var d=document.createElement('div');d.className='cday';
     if(ds===td)d.classList.add('tod');
     if(ds===G.sel)d.classList.add('sel');
-    if(evD.has(ds))d.classList.add('hev');
+    if(evDayMap[ds]){d.classList.add('hev');d.classList.add('hev-'+(evDayMap[ds]||'autre'));}
     if(annivD.has(ds))d.classList.add('hav');
     // Marquer les plages multi-jours
     spans.forEach(function(ev){
+      var cat=ev.cat||'autre';
       if(ds>=ev.date && ds<=ev.dateEnd){
-        if(ds===ev.date)d.classList.add('hspan-start');
-        else if(ds===ev.dateEnd)d.classList.add('hspan-end');
-        else d.classList.add('hspan');
+        if(ds===ev.date)d.classList.add('hspan-start','hspan-start-'+cat);
+        else if(ds===ev.dateEnd)d.classList.add('hspan-end','hspan-end-'+cat);
+        else d.classList.add('hspan','hspan-'+cat);
+        d.style.color=CC[cat]||'var(--rose-d)';
       }
     });
     d.textContent=day;
@@ -980,17 +1019,20 @@ function selDate(ds){
     html+='<div class="evc" style="border-left-color:#F5A623;cursor:pointer" onclick="editAnniv(\''+a.id+'\')"><div class="evt" style="color:#9A6500">🎂</div><div class="evb"><div class="evn">'+(AT[a.type]||'🎉')+' '+a.name+as+'</div><div class="evm"><span style="color:#9A6500">'+(AL[a.type]||'Anniversaire')+'</span>'+(a.note?'<span>📝 '+a.note+'</span>':'')+'</div></div><span style="font-size:.7rem;color:var(--muted);align-self:center;padding-left:.3rem">✏️</span></div>';
   });
   html+=evs.map(function(ev){
+    var cat=ev.cat||'autre';
+    var col=CC[cat]||'var(--rose)';
     var duree='';
     if(ev.dateEnd){
       var d1=new Date(ev.date),d2=new Date(ev.dateEnd);
       var jours=Math.round((d2-d1)/(86400000))+1;
       duree='<span>📆 '+fmtFR(ev.date)+' → '+fmtFR(ev.dateEnd)+' ('+jours+'j)</span>';
     }
-    return '<div class="evc'+(ev.authorName!==G.n1?' pt':'')+'" onclick="editEv(\''+ev.id+'\')" style="cursor:pointer'+(ev.dateEnd?';border-left-color:#9B72CF':'')+'">'
-      +'<div class="evt">'+(ev.dateEnd?'📆':(ev.time||'Toute la journée'))+'</div>'
-      +'<div class="evb"><div class="evn">'+(CE[ev.cat]||'📌')+' '+ev.title+'</div>'
-      +'<div class="evm"><span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span>'
-      +'<span>'+(CL[ev.cat]||'Autre')+'</span>'
+    return '<div class="evc" onclick="editEv(\''+ev.id+'\')" style="cursor:pointer;border-left-color:'+col+'">'
+      +'<div class="evt" style="color:'+col+'">'+(ev.dateEnd?'📆':(ev.time||'Toute la j.'))+'</div>'
+      +'<div class="evb"><div class="evn">'+(CE[cat]||'📌')+' '+ev.title+'</div>'
+      +'<div class="evm">'
+      +'<span class="catbdg catbdg-'+cat+'">'+(CL[cat]||'Autre')+'</span>'
+      +'<span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span>'
       +duree
       +(ev.note?'<span>📝 '+ev.note+'</span>':'')
       +(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')
