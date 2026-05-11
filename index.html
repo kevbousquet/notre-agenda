@@ -99,7 +99,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .cmo{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:600}
 .cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center}
 .cdow{font-size:.58rem;font-weight:500;color:var(--muted);text-transform:uppercase;padding:2px 0 6px;letter-spacing:.04em}
-.cday{aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.78rem;cursor:pointer;position:relative;user-select:none;-webkit-user-select:none}
+.cday{aspect-ratio:1;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.78rem;cursor:pointer;position:relative;user-select:none;-webkit-user-select:none;gap:1px}
 .cday:active{background:var(--rose-l)}
 .cday.tod{background:var(--rose);color:#fff;font-weight:600}
 .cday.sel:not(.tod){background:var(--sage-l);color:var(--sage);font-weight:600}
@@ -123,9 +123,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .evc.cat-travail{background:#EBF1FB}
 .evc.cat-autre{background:#FCF0F2}
 /* Dots calendrier — points multiples */
-.cday .dots{display:flex;gap:2px;justify-content:center;position:absolute;bottom:2px;left:0;right:0}
-.cday .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.cday.tod .dot{opacity:.85}
+.cday .dots{display:flex;gap:2px;justify-content:center}
+.cday .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.cday.tod .dot{background:rgba(255,255,255,.8)!important}
 /* Badge catégorie dans la carte */
 .catbdg{display:inline-flex;align-items:center;gap:3px;font-size:.7rem;font-weight:600;padding:.15rem .55rem;border-radius:20px}
 .catbdg-famille{background:#FDF0EA;color:#B85D32}
@@ -955,16 +955,18 @@ function renderCal(){
   // Anniversaires
   var annivD=new Set();
   G.annivs.forEach(function(a){var p=a.date.split('-');var m=parseInt(p[1])-1;var d=parseInt(p[2]);if(m===G.mo){annivD.add(G.yr+'-'+pad(G.mo+1)+'-'+pad(d));}});
-  for(var i=0;i<dow;i++){var pd=document.createElement('div');pd.className='cday om pad';pd.textContent=prev-dow+1+i;grid.appendChild(pd);}
+  for(var i=0;i<dow;i++){var pd=document.createElement('div');pd.className='cday om pad';pd.appendChild(document.createTextNode(prev-dow+1+i));grid.appendChild(pd);}
   for(var day=1;day<=days;day++){
     var ds=G.yr+'-'+pad(G.mo+1)+'-'+pad(day);
     var d=document.createElement('div');d.className='cday';
     if(ds===td)d.classList.add('tod');
     if(ds===G.sel)d.classList.add('sel');
+    // Numéro du jour en premier
+    var numEl=document.createElement('span');numEl.textContent=day;d.appendChild(numEl);
+    // Points catégories
     if(evDayMap[ds]){
       d.classList.add('hev');
       var dotsEl=document.createElement('div');dotsEl.className='dots';
-      // Max 3 points, dédupliqués par catégorie
       var cats=evDayMap[ds].filter(function(c,i,a){return a.indexOf(c)===i}).slice(0,3);
       cats.forEach(function(cat){
         var dot=document.createElement('span');dot.className='dot';
@@ -979,14 +981,14 @@ function renderCal(){
       var aDot=document.createElement('span');aDot.className='dot';aDot.style.background='#F5A623';
       dotsEl2.appendChild(aDot);d.appendChild(dotsEl2);
     } else if(annivD.has(ds)&&evDayMap[ds]){
-      // Ajouter un point orange aux points existants
       var existingDots=d.querySelector('.dots');
       if(existingDots&&existingDots.children.length<3){
         var aDot2=document.createElement('span');aDot2.className='dot';aDot2.style.background='#F5A623';
         existingDots.appendChild(aDot2);
       }
     }
-    // Marquer les plages multi-jours
+    (function(date){d.onclick=function(){selDate(date)}})(ds);
+    // Plages multi-jours
     spans.forEach(function(ev){
       var cat=ev.cat||'autre';
       if(ds>=ev.date && ds<=ev.dateEnd){
@@ -996,8 +998,6 @@ function renderCal(){
         d.style.color=CC[cat]||'var(--rose-d)';
       }
     });
-    d.textContent=day;
-    (function(date){d.onclick=function(){selDate(date)}})(ds);
     grid.appendChild(d);
   }
   renderToday();
