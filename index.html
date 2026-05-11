@@ -107,6 +107,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .cday.tod.hev::after{background:rgba(255,255,255,.7)}
 .cday.hav:not(.hev)::after{content:'';position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:#F5A623}
 .cday.tod.hav:not(.hev)::after{background:rgba(255,255,255,.7)}
+.cday.hspan{background:rgba(212,120,138,.15);border-radius:0;color:var(--rose-d)}
+.cday.hspan-start{background:rgba(212,120,138,.2);border-radius:8px 0 0 8px;color:var(--rose-d);font-weight:600}
+.cday.hspan-end{background:rgba(212,120,138,.2);border-radius:0 8px 8px 0;color:var(--rose-d);font-weight:600}
+.cday.hspan-solo{background:rgba(212,120,138,.15);border-radius:8px}
+.cday.tod.hspan,.cday.tod.hspan-start,.cday.tod.hspan-end{background:var(--rose);color:#fff}
 .cday.om{color:var(--muted);opacity:.35}
 
 /* EVENTS */
@@ -397,8 +402,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     <input type="hidden" id="eid">
     <div class="mf"><label>Titre</label><input type="text" id="et" placeholder="Ex: Dîner chez les parents"></div>
     <div class="mrow">
-      <div class="mf"><label>Date</label><input type="date" id="ed"></div>
+      <div class="mf"><label>Date début</label><input type="date" id="ed"></div>
+      <div class="mf"><label>Date fin <span style="font-size:.7rem;color:var(--muted)">(optionnel)</span></label><input type="date" id="edend"></div>
+    </div>
+    <div class="mrow">
       <div class="mf"><label>Heure</label><input type="time" id="eh"></div>
+      <div class="mf"></div>
     </div>
     <div class="mf"><label>Catégorie</label>
       <select id="ec">
@@ -853,7 +862,7 @@ function loadLocal(){
     G.events=(d.events||[]).map(function(ev){
       var nd=normalizeDate(ev.date);
       if(!nd)return null;
-      return {id:ev.id,title:ev.title||'',date:nd,time:ev.time||'',cat:ev.cat||'autre',note:ev.note||'',reminder:ev.reminder||'0',authorName:ev.authorName||G.n1,ts:ev.ts||Date.now()};
+      return {id:ev.id,title:ev.title||'',date:nd,dateEnd:ev.dateEnd||null,time:ev.time||'',cat:ev.cat||'autre',note:ev.note||'',reminder:ev.reminder||'0',authorName:ev.authorName||G.n1,ts:ev.ts||Date.now()};
     }).filter(function(ev){return ev!==null;});
     G.todos=d.todos||[];
     G.annivs=(d.annivs||[]).map(function(a){
@@ -906,10 +915,14 @@ function renderCal(){
   var days=new Date(G.yr,G.mo+1,0).getDate();
   var prev=new Date(G.yr,G.mo,0).getDate();
   var td=today();
-  var evD=new Set(G.events.map(function(e){return e.date}));
+  // Événements ponctuels
+  var evD=new Set(G.events.filter(function(e){return !e.dateEnd}).map(function(e){return e.date}));
+  // Plages multi-jours
+  var spans=G.events.filter(function(e){return e.dateEnd && e.dateEnd>e.date});
+  // Anniversaires
   var annivD=new Set();
   G.annivs.forEach(function(a){var p=a.date.split('-');var m=parseInt(p[1])-1;var d=parseInt(p[2]);if(m===G.mo){annivD.add(G.yr+'-'+pad(G.mo+1)+'-'+pad(d));}});
-  for(var i=0;i<dow;i++){var d=document.createElement('div');d.className='cday om pad';d.textContent=prev-dow+1+i;grid.appendChild(d);}
+  for(var i=0;i<dow;i++){var pd=document.createElement('div');pd.className='cday om pad';pd.textContent=prev-dow+1+i;grid.appendChild(pd);}
   for(var day=1;day<=days;day++){
     var ds=G.yr+'-'+pad(G.mo+1)+'-'+pad(day);
     var d=document.createElement('div');d.className='cday';
@@ -917,6 +930,14 @@ function renderCal(){
     if(ds===G.sel)d.classList.add('sel');
     if(evD.has(ds))d.classList.add('hev');
     if(annivD.has(ds))d.classList.add('hav');
+    // Marquer les plages multi-jours
+    spans.forEach(function(ev){
+      if(ds>=ev.date && ds<=ev.dateEnd){
+        if(ds===ev.date)d.classList.add('hspan-start');
+        else if(ds===ev.dateEnd)d.classList.add('hspan-end');
+        else d.classList.add('hspan');
+      }
+    });
     d.textContent=day;
     (function(date){d.onclick=function(){selDate(date)}})(ds);
     grid.appendChild(d);
@@ -925,20 +946,31 @@ function renderCal(){
 }
 function renderToday(){
   var td2=today();
-  var evs=G.events.filter(function(e){return e.date && e.date.trim()===td2}).sort(function(a,b){return(a.time||'').localeCompare(b.time||'')});
+  var evs=G.events.filter(function(e){
+    if(!e.date)return false;
+    if(e.dateEnd)return td2>=e.date && td2<=e.dateEnd;
+    return e.date.trim()===td2;
+  }).sort(function(a,b){return(a.time||'').localeCompare(b.time||'')});
   var annivs=G.annivs.filter(function(a){return a.date.slice(5)===td2.slice(5)});
   var el=document.getElementById('todaystrip');
   if(!evs.length&&!annivs.length){el.innerHTML='<p class="tempty">Rien de prévu — journée libre 🌸</p>';return;}
   var html='';
   annivs.forEach(function(a){var age=ageNow(a.date);html+='<div class="tev">🎂 <strong>'+a.name+'</strong>'+(age?' · '+age+' ans':'')+'</div>';});
-  html+=evs.map(function(e){return'<div class="tev">'+(CE[e.cat]||'📌')+' <strong>'+e.title+'</strong>'+(e.time?' · '+e.time:'')+'</div>'}).join('');
+  html+=evs.map(function(e){
+    var suffix=e.dateEnd?' · jusqu\'au '+fmtFR(e.dateEnd):'';
+    return'<div class="tev">'+(CE[e.cat]||'📌')+' <strong>'+e.title+'</strong>'+(e.time?' · '+e.time:'')+suffix+'</div>';
+  }).join('');
   el.innerHTML=html;
 }
 function selDate(ds){
   G.sel=ds; renderCal();
   var p=ds.split('-'); var lbl=new Date(p[0],p[1]-1,p[2]).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('evdate').textContent=lbl.charAt(0).toUpperCase()+lbl.slice(1);
-  var evs=G.events.filter(function(e){return e.date && e.date.trim()===ds.trim()}).sort(function(a,b){return(a.time||'23:59').localeCompare(b.time||'23:59')});
+  var evs=G.events.filter(function(e){
+    if(!e.date)return false;
+    if(e.dateEnd)return ds>=e.date && ds<=e.dateEnd;
+    return e.date.trim()===ds.trim();
+  }).sort(function(a,b){return(a.time||'23:59').localeCompare(b.time||'23:59')});
   var annivs=G.annivs.filter(function(a){return a.date.slice(5)===ds.slice(5)});
   var list=document.getElementById('evlist');
   if(!evs.length&&!annivs.length){list.innerHTML='<div class="noev"><p>Aucun événement<br><span style="font-size:.8rem;opacity:.7">Appuyez sur "+ Ajouter"</span></p></div>';return;}
@@ -948,7 +980,21 @@ function selDate(ds){
     html+='<div class="evc" style="border-left-color:#F5A623;cursor:pointer" onclick="editAnniv(\''+a.id+'\')"><div class="evt" style="color:#9A6500">🎂</div><div class="evb"><div class="evn">'+(AT[a.type]||'🎉')+' '+a.name+as+'</div><div class="evm"><span style="color:#9A6500">'+(AL[a.type]||'Anniversaire')+'</span>'+(a.note?'<span>📝 '+a.note+'</span>':'')+'</div></div><span style="font-size:.7rem;color:var(--muted);align-self:center;padding-left:.3rem">✏️</span></div>';
   });
   html+=evs.map(function(ev){
-    return '<div class="evc'+(ev.authorName!==G.n1?' pt':'')+'" onclick="editEv(\''+ev.id+'\')" style="cursor:pointer"><div class="evt">'+(ev.time||'Toute la journée')+'</div><div class="evb"><div class="evn">'+(CE[ev.cat]||'📌')+' '+ev.title+'</div><div class="evm"><span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span><span>'+(CL[ev.cat]||'Autre')+'</span>'+(ev.note?'<span>📝 '+ev.note+'</span>':'')+(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')+'</div></div><button class="edel" onclick="event.stopPropagation();delEv(\''+ev.id+'\')">✕</button></div>';
+    var duree='';
+    if(ev.dateEnd){
+      var d1=new Date(ev.date),d2=new Date(ev.dateEnd);
+      var jours=Math.round((d2-d1)/(86400000))+1;
+      duree='<span>📆 '+fmtFR(ev.date)+' → '+fmtFR(ev.dateEnd)+' ('+jours+'j)</span>';
+    }
+    return '<div class="evc'+(ev.authorName!==G.n1?' pt':'')+'" onclick="editEv(\''+ev.id+'\')" style="cursor:pointer'+(ev.dateEnd?';border-left-color:#9B72CF':'')+'">'
+      +'<div class="evt">'+(ev.dateEnd?'📆':(ev.time||'Toute la journée'))+'</div>'
+      +'<div class="evb"><div class="evn">'+(CE[ev.cat]||'📌')+' '+ev.title+'</div>'
+      +'<div class="evm"><span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span>'
+      +'<span>'+(CL[ev.cat]||'Autre')+'</span>'
+      +duree
+      +(ev.note?'<span>📝 '+ev.note+'</span>':'')
+      +(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')
+      +'</div></div><button class="edel" onclick="event.stopPropagation();delEv(\''+ev.id+'\')">✕</button></div>';
   }).join('');
   list.innerHTML=html;}
 function chMo(d){G.mo+=d;if(G.mo>11){G.mo=0;G.yr++;}if(G.mo<0){G.mo=11;G.yr--;}renderCal();}
@@ -959,35 +1005,34 @@ function closeM(id){document.getElementById(id).classList.remove('on');}
 function saveEv(){
   var t=document.getElementById('et').value.trim();
   var d=document.getElementById('ed').value;
+  var dend=document.getElementById('edend').value||null;
+  if(dend&&dend<=d)dend=null; // ignorer si fin <= début
   if(!t||!d){alert('Titre et date obligatoires');return;}
   var reminder=document.getElementById('er').value;
   var existingId=document.getElementById('eid').value;
   if(existingId){
-    // ── MODIFICATION ──
     var idx=G.events.findIndex(function(e){return e.id===existingId});
     if(idx>=0){
       var ev=G.events[idx];
-      ev.title=t;ev.date=d;ev.time=document.getElementById('eh').value;
+      ev.title=t;ev.date=d;ev.dateEnd=dend||null;ev.time=document.getElementById('eh').value;
       ev.cat=document.getElementById('ec').value;ev.note=document.getElementById('en').value.trim();
       ev.reminder=reminder;
       putFb('events/'+ev.id,ev);
       pushN('✏️',G.n1+' a modifié "'+t+'"','À l\'instant');
     }
   } else {
-    // ── CRÉATION ──
-    var ev={id:Date.now().toString(),title:t,date:d,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
+    var ev={id:Date.now().toString(),title:t,date:d,dateEnd:dend||null,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
     G.events.push(ev);
-    pushN('📅',G.n1+' a ajouté "'+t+'" le '+fmtFR(d),'À l\'instant');
+    var msg=G.n1+' a ajouté "'+t+'"'+(dend?' du '+fmtFR(d)+' au '+fmtFR(dend):' le '+fmtFR(d));
+    pushN('📅',msg,'À l\'instant');
     putFb('events/'+ev.id,ev);
   }
-  saveLocal();
-  closeM('mev');
-  _resetEvModal();
-  renderCal();selDate(d);
+  saveLocal();closeM('mev');_resetEvModal();renderCal();selDate(d);
 }
 function _resetEvModal(){
   document.getElementById('eid').value='';
   document.getElementById('et').value='';document.getElementById('eh').value='';
+  document.getElementById('edend').value='';
   document.getElementById('en').value='';document.getElementById('er').value='0';
   document.getElementById('mev-title').textContent='📅 Nouvel événement';
   document.getElementById('mev-save').textContent='Enregistrer 💾';
@@ -998,6 +1043,7 @@ function editEv(id){
   document.getElementById('eid').value=ev.id;
   document.getElementById('et').value=ev.title;
   document.getElementById('ed').value=ev.date;
+  document.getElementById('edend').value=ev.dateEnd||'';
   document.getElementById('eh').value=ev.time||'';
   document.getElementById('ec').value=ev.cat||'autre';
   document.getElementById('en').value=ev.note||'';
@@ -1317,7 +1363,10 @@ function addWeeklyNotif(){
     var dayLabel=dayNames[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1);
 
     // Événements ce jour
-    var evs=G.events.filter(function(e){return e.date===ds});
+    var evs=G.events.filter(function(e){
+      if(e.dateEnd)return ds<=e.dateEnd && ds>=e.date;
+      return e.date===ds;
+    });
     evs.forEach(function(e){
       lines.push(dayLabel+' · '+e.title+(e.time?' à '+e.time:''));
     });
