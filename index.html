@@ -146,6 +146,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .adot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:2px;vertical-align:middle}
 .edel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:4px;opacity:.45}
 .edel:active{opacity:1;color:#c94a4a}
+.edup{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:4px;opacity:.45}
+.edup:active{opacity:1;color:var(--rose)}
+/* Modal duplication */
+.daysel{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:.5rem 0}
+.daysel label{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.daysel input{display:none}
+.daybtn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:600;background:var(--bg);color:var(--muted);border:1.5px solid var(--border);transition:all .15s;cursor:pointer}
+.daysel input:checked+.daybtn{background:var(--rose);color:#fff;border-color:var(--rose)}
+.dup-result{font-size:.82rem;color:var(--sage);font-weight:500;margin-top:.5rem;min-height:1.2rem}
 .noev{background:var(--sage-l);border-radius:14px;padding:1.5rem;text-align:center}
 .noev p{color:var(--sage);font-size:.88rem;line-height:1.5}
 
@@ -479,6 +488,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     </div>
     <div class="mf"><label>Note</label><input type="text" id="ano" placeholder="Ex: Aime les fleurs..."></div>
     <div class="mac"><button class="mcanc" onclick="closeM('mann')">Annuler</button><button class="msav" id="mann-save" onclick="saveAnniv()">Enregistrer 🎂</button></div>
+  </div>
+</div>
+
+<!-- MODAL DUPLICATION -->
+<div class="mbg" id="mdup" onclick="if(event.target===this)closeM('mdup')">
+  <div class="modal">
+    <h2>📋 Dupliquer l'événement</h2>
+    <input type="hidden" id="dupid">
+    <div class="mf" id="dup-evlbl" style="background:var(--bg);border-radius:12px;padding:.75rem 1rem;font-size:.9rem;font-weight:500;color:var(--dark)"></div>
+    <div class="mf">
+      <label>Jours de la semaine</label>
+      <div class="daysel">
+        <label><input type="checkbox" value="1" class="dday"><span class="daybtn">L</span></label>
+        <label><input type="checkbox" value="2" class="dday"><span class="daybtn">M</span></label>
+        <label><input type="checkbox" value="3" class="dday"><span class="daybtn">M</span></label>
+        <label><input type="checkbox" value="4" class="dday"><span class="daybtn">J</span></label>
+        <label><input type="checkbox" value="5" class="dday"><span class="daybtn">V</span></label>
+        <label><input type="checkbox" value="6" class="dday"><span class="daybtn">S</span></label>
+        <label><input type="checkbox" value="0" class="dday"><span class="daybtn">D</span></label>
+      </div>
+    </div>
+    <div class="mrow">
+      <div class="mf"><label>Du</label><input type="date" id="dup-from"></div>
+      <div class="mf"><label>Au</label><input type="date" id="dup-to"></div>
+    </div>
+    <div class="dup-result" id="dup-result"></div>
+    <div class="mac">
+      <button class="mcanc" onclick="closeM('mdup')">Annuler</button>
+      <button class="msav" onclick="doDuplicate()">Dupliquer 📋</button>
+    </div>
   </div>
 </div>
 
@@ -1057,7 +1096,11 @@ function selDate(ds){
       +duree
       +(ev.note?'<span>📝 '+ev.note+'</span>':'')
       +(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')
-      +'</div></div><button class="edel" onclick="event.stopPropagation();delEv(\''+ev.id+'\')">✕</button></div>';
+      +'</div></div>'
+      +'<div style="display:flex;flex-direction:column;gap:2px">'
+      +'<button class="edup" onclick="event.stopPropagation();openDup(\''+ev.id+'\')" title="Dupliquer">📋</button>'
+      +'<button class="edel" onclick="event.stopPropagation();delEv(\''+ev.id+'\')" title="Supprimer">✕</button>'
+      +'</div></div>';
   }).join('');
   list.innerHTML=html;}
 function chMo(d){G.mo+=d;if(G.mo>11){G.mo=0;G.yr++;}if(G.mo<0){G.mo=11;G.yr--;}renderCal();}
@@ -1115,7 +1158,80 @@ function editEv(id){
   document.getElementById('mev-save').textContent='Mettre à jour 💾';
   openM('mev');
 }
+// ── DUPLICATION ──
+function openDup(id){
+  var ev=G.events.find(function(e){return e.id===id});
+  if(!ev)return;
+  document.getElementById('dupid').value=id;
+  var cat=ev.cat||'autre';
+  var bgMap={famille:'#FDF0EA',loisir:'#F3EDFC',sante:'#E8F6F5',travail:'#EBF1FB',autre:'#FCF0F2'};
+  document.getElementById('dup-evlbl').textContent=(CE[cat]||'📌')+' '+ev.title+(ev.time?' · '+ev.time:'');
+  document.getElementById('dup-evlbl').style.background=bgMap[cat]||'#FCF0F2';
+  // Plage par défaut : semaine en cours
+  var nd=new Date(ev.date);
+  var from=new Date(nd);from.setDate(from.getDate()+1);
+  var to=new Date(from);to.setDate(to.getDate()+27); // ~4 semaines
+  document.getElementById('dup-from').value=from.getFullYear()+'-'+pad(from.getMonth()+1)+'-'+pad(from.getDate());
+  document.getElementById('dup-to').value=to.getFullYear()+'-'+pad(to.getMonth()+1)+'-'+pad(to.getDate());
+  // Pré-cocher le jour de semaine de l'événement original
+  document.querySelectorAll('.dday').forEach(function(cb){
+    cb.checked=(parseInt(cb.value)===nd.getDay());
+  });
+  updateDupPreview();
+  // Recalculer à chaque changement
+  document.querySelectorAll('.dday').forEach(function(cb){cb.onchange=updateDupPreview;});
+  document.getElementById('dup-from').onchange=updateDupPreview;
+  document.getElementById('dup-to').onchange=updateDupPreview;
+  openM('mdup');
+}
+
+function updateDupPreview(){
+  var dates=_getDupDates();
+  var r=document.getElementById('dup-result');
+  if(!dates.length){r.textContent='';return;}
+  r.textContent='→ '+dates.length+' occurrence'+(dates.length>1?'s':'')+' : '+dates.slice(0,3).map(function(d){return fmtFR(d)}).join(', ')+(dates.length>3?' …':'');
+}
+
+function _getDupDates(){
+  var from=document.getElementById('dup-from').value;
+  var to=document.getElementById('dup-to').value;
+  if(!from||!to||from>to)return[];
+  var days=[];
+  document.querySelectorAll('.dday:checked').forEach(function(cb){days.push(parseInt(cb.value));});
+  if(!days.length)return[];
+  var dates=[];
+  var cur=new Date(from);cur.setHours(12);
+  var end=new Date(to);end.setHours(12);
+  while(cur<=end){
+    if(days.indexOf(cur.getDay())>=0){
+      dates.push(cur.getFullYear()+'-'+pad(cur.getMonth()+1)+'-'+pad(cur.getDate()));
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  return dates;
+}
+
+function doDuplicate(){
+  var id=document.getElementById('dupid').value;
+  var src=G.events.find(function(e){return e.id===id});
+  if(!src)return;
+  var dates=_getDupDates();
+  if(!dates.length){alert('Sélectionne au moins un jour et une plage de dates.');return;}
+  // Éviter les doublons sur des dates déjà existantes pour cet événement
+  var existingDates=new Set(G.events.filter(function(e){return e.title===src.title&&e.time===src.time}).map(function(e){return e.date}));
+  var toCreate=dates.filter(function(d){return!existingDates.has(d);});
+  if(!toCreate.length){showToast('Ces occurrences existent déjà !');closeM('mdup');return;}
+  toCreate.forEach(function(d){
+    var copy={id:(Date.now()+Math.random()).toString().replace('.',''),title:src.title,date:d,dateEnd:null,time:src.time,cat:src.cat,note:src.note,reminder:src.reminder,authorName:G.n1,ts:Date.now()};
+    G.events.push(copy);
+    putFb('events/'+copy.id,copy);
+  });
+  saveLocal();closeM('mdup');renderCal();selDate(src.date);
+  showToast('✅ '+toCreate.length+' occurrence'+(toCreate.length>1?'s':'')+'créée'+(toCreate.length>1?'s':'')+' !');
+  pushN('📋',G.n1+' a dupliqué "'+src.title+'" sur '+toCreate.length+' jour'+(toCreate.length>1?'s':''),'À l\'instant');
+}
 function delEv(id){
+  if(!confirm('Supprimer cet événement ?'))return;
   G.events=G.events.filter(function(e){return e.id!==id});
   delFb('events/'+id);saveLocal();
   renderCal();if(G.sel)selDate(G.sel);
