@@ -1710,7 +1710,7 @@ function subscribePush(reg){
       return fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,deviceId:deviceId,subscription:sub.toJSON?sub.toJSON():sub})});
     })
     .then(function(r){r.json().then(function(d){showToast('Push OK: '+JSON.stringify(d));});})
-    .catch(function(e){showToast('Push ERR: '+e.message);console.error('subscribePush:',e);});
+    .catch(function(e){alert('Push ERR: '+e.message+'\n\nname: '+e.name);console.error('subscribePush:',e);});
 }
 function urlB64ToUint8Array(b){
   var p='='.repeat((4-b.length%4)%4),s=(b+p).replace(/-/g,'+').replace(/_/g,'/');
