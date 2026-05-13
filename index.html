@@ -1311,6 +1311,7 @@ function addCourse(){
   document.getElementById('cinp').value='';
   var coursMsg=G.n1+' a ajouté "'+name+'" à la liste de courses';
   pushN('🛒',coursMsg,'À l\'instant');
+  notifyPartner('🛒 Notre Agenda',coursMsg);
   putFb('courses/'+c.id,c);saveLocal();
   renderCourses();updateCbdg();
 }
@@ -1388,6 +1389,7 @@ function addTodo(){
   document.getElementById('tinp').value='';
   var todoMsg=G.n1+' a ajouté "'+text+'" à la todo';
   pushN('✅',todoMsg,'À l\'instant');
+  notifyPartner('✅ Notre Agenda',todoMsg);
   putFb('todos/'+todo.id,todo);saveLocal();
   renderTodo();updateTbdg();
 }
@@ -1461,12 +1463,14 @@ function saveAnniv(){
       a.reminder=reminder;a.note=note;
       putFb('annivs/'+a.id,a);
       pushN('✏️',G.n1+' a modifié l\'anniversaire de '+name,'À l\'instant');
+      notifyPartner('✏️ Notre Agenda',G.n1+' a modifié l\'anniversaire de '+name);
     }
   } else {
     // ── CRÉATION ──
     var a={id:Date.now().toString(),name:name,date:date,type:document.getElementById('at').value,reminder:reminder,note:note,authorName:G.n1,ts:Date.now()};
     G.annivs.push(a);
     pushN('🎂',G.n1+' a ajouté l\'anniversaire de '+name,'À l\'instant');
+    notifyPartner('🎂 Notre Agenda',G.n1+' a ajouté l\'anniversaire de '+name);
     putFb('annivs/'+a.id,a);
   }
   saveLocal();
