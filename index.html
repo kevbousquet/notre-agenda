@@ -1691,8 +1691,10 @@ function nativeNotif(title,body){
   else{new Notification(title,opts);}
 }
 function subscribePush(reg){
+  showToast('subscribePush appelée, code='+G.code+' perm='+Notification.permission);
   if(!G.code||!WORKER_URL)return;
   var r2=reg||swReg;
+  if(!r2||!r2.pushManager){showToast('ERR: pushManager indisponible');return;}
   fetch(WORKER_URL+'/vapid-key')
     .then(function(r){return r.json();})
     .then(function(d){
