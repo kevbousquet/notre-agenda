@@ -1691,10 +1691,9 @@ function nativeNotif(title,body){
   else{new Notification(title,opts);}
 }
 function subscribePush(reg){
-  showToast('subscribePush appelée, code='+G.code+' perm='+Notification.permission);
   if(!G.code||!WORKER_URL)return;
   var r2=reg||swReg;
-  if(!r2||!r2.pushManager){showToast('ERR: pushManager indisponible');return;}
+  if(!r2||!r2.pushManager)return;
   fetch(WORKER_URL+'/vapid-key')
     .then(function(r){return r.json();})
     .then(function(d){
@@ -1709,8 +1708,7 @@ function subscribePush(reg){
     .then(function(sub){
       return fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,deviceId:deviceId,subscription:sub.toJSON?sub.toJSON():sub})});
     })
-    .then(function(r){r.json().then(function(d){showToast('Push OK: '+JSON.stringify(d));});})
-    .catch(function(e){alert('Push ERR: '+e.message+'\n\nname: '+e.name);console.error('subscribePush:',e);});
+    .catch(function(e){console.error('subscribePush:',e);});
 }
 function urlB64ToUint8Array(b){
   var p='='.repeat((4-b.length%4)%4),s=(b+p).replace(/-/g,'+').replace(/_/g,'/');
