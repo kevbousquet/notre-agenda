@@ -554,6 +554,8 @@ var G = {
   sel: null, tab:'agenda', tf:'all', cf:'all'
 };
 var fbTimer = null, swReg = null;
+var WORKER_URL = 'https://notre-agenda-worker.kevbousquetagenda.workers.dev';
+var deviceId = localStorage.getItem('_did') || (function(){ var id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2); localStorage.setItem('_did',id); return id; })();
 
 // ── HELPERS ──
 function today(){
@@ -703,6 +705,7 @@ function regSW(){
     .then(function(r){
       swReg=r;
       if(r.periodicSync){r.periodicSync.register('daily-check',{minInterval:86400000}).catch(function(){});}
+      if(Notification.permission==='granted'&&G.code) subscribePush(r);
     }).catch(function(){});
   navigator.serviceWorker.addEventListener('message',function(e){
     if(e.data&&e.data.type==='CHECK_REMINDERS'&&G.n1){
@@ -1182,12 +1185,14 @@ function saveEv(){
       putFb('events/'+ev.id,ev);
       var modMsg=G.n1+' a modifié "'+t+'"'+(d?' le '+fmtFR(d):'');
       pushN('✏️',modMsg,'À l\'instant');
+      notifyPartner('✏️ Notre Agenda',modMsg);
     }
   } else {
     var ev={id:Date.now().toString(),title:t,date:d,dateEnd:dend||null,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
     G.events.push(ev);
     var msg=G.n1+' a ajouté "'+t+'"'+(dend?' du '+fmtFR(d)+' au '+fmtFR(dend):' le '+fmtFR(d));
     pushN('📅',msg,'À l\'instant');
+    notifyPartner('📅 Notre Agenda',msg);
     putFb('events/'+ev.id,ev);
   }
   saveLocal();closeM('mev');_resetEvModal();renderCal();selDate(d);
@@ -1671,7 +1676,7 @@ function askPush(){
   if(!('Notification' in window)){showToast('Notifications non supportées');return;}
   Notification.requestPermission().then(function(p){
     document.getElementById('pbanner').classList.remove('on');
-    if(p==='granted'){showToast('✅ Notifications activées !');nativeNotif('Notre Agenda','Notifications activées !');}
+    if(p==='granted'){showToast('✅ Notifications activées !');nativeNotif('Notre Agenda','Notifications activées !');if(swReg&&G.code)subscribePush(swReg);}
   });
 }
 function nativeNotif(title,body){
@@ -1680,6 +1685,26 @@ function nativeNotif(title,body){
   var opts={body:body,icon:'/notre-agenda/icons/icon-192.png',badge:'/notre-agenda/icons/icon-192.png',vibrate:[100,50,100],tag:tag,renotify:true};
   if(swReg){swReg.showNotification(title,opts);}
   else{new Notification(title,opts);}
+}
+function subscribePush(reg){
+  if(!G.code||!WORKER_URL)return;
+  fetch(WORKER_URL+'/vapid-key')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      return (reg||swReg).pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(d.publicKey)});
+    })
+    .then(function(sub){
+      return fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,deviceId:deviceId,subscription:sub})});
+    })
+    .catch(function(e){console.warn('subscribePush:',e);});
+}
+function urlB64ToUint8Array(b){
+  var p='='.repeat((4-b.length%4)%4),s=(b+p).replace(/-/g,'+').replace(/_/g,'/');
+  return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0);});
+}
+function notifyPartner(title,body){
+  if(!G.code||!WORKER_URL)return;
+  fetch(WORKER_URL+'/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,title:title,body:body,skipDeviceId:deviceId})}).catch(function(){});
 }
 
 // ── REPRISE D'ACTIVITÉ ──
