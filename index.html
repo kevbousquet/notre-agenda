@@ -1692,15 +1692,22 @@ function nativeNotif(title,body){
 }
 function subscribePush(reg){
   if(!G.code||!WORKER_URL)return;
+  var r2=reg||swReg;
   fetch(WORKER_URL+'/vapid-key')
     .then(function(r){return r.json();})
     .then(function(d){
-      return (reg||swReg).pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(d.publicKey)});
+      var appKey=urlB64ToUint8Array(d.publicKey);
+      return r2.pushManager.getSubscription().then(function(existing){
+        if(existing) return existing.unsubscribe().then(function(){
+          return r2.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:appKey});
+        });
+        return r2.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:appKey});
+      });
     })
     .then(function(sub){
-      return fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,deviceId:deviceId,subscription:sub})});
+      return fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,deviceId:deviceId,subscription:sub.toJSON?sub.toJSON():sub})});
     })
-    .catch(function(e){console.warn('subscribePush:',e);});
+    .catch(function(e){console.error('subscribePush:',e);});
 }
 function urlB64ToUint8Array(b){
   var p='='.repeat((4-b.length%4)%4),s=(b+p).replace(/-/g,'+').replace(/_/g,'/');
