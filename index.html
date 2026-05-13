@@ -104,6 +104,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .cday.tod{background:var(--rose);color:#fff;font-weight:600}
 .cday.sel:not(.tod){background:var(--sage-l);color:var(--sage);font-weight:600}
 .cday.hav-dot{position:absolute;bottom:2px;width:6px;height:6px;border-radius:50%;background:#F5A623}
+.cday.ferie{background:rgba(255,193,7,.13);color:#8A6200;font-weight:600}
+.cday.ferie.tod{background:var(--rose);color:#fff}
+.cday.ferie .ferie-flag{font-size:.5rem;line-height:1;display:block;text-align:center}
+/* Bandeau jour férié dans la liste du jour */
+.ferie-banner{background:#FFF8E1;border-radius:12px;padding:.55rem .9rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.6rem;font-size:.82rem;font-weight:600;color:#7A5800;overflow:hidden;position:relative}
+.ferie-banner::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(to bottom,#002395 33%,#fff 33%,#fff 66%,#ED2939 66%)}
+.ferie-banner-text{padding-left:.2rem}
 .cday.hspan{background:rgba(212,120,138,.15);border-radius:0;color:var(--rose-d)}
 .cday.hspan-start{background:rgba(212,120,138,.2);border-radius:8px 0 0 8px;color:var(--rose-d);font-weight:600}
 .cday.hspan-end{background:rgba(212,120,138,.2);border-radius:0 8px 8px 0;color:var(--rose-d);font-weight:600}
@@ -557,7 +564,38 @@ function pad(n){return String(n).padStart(2,'0')}
 function fmtFR(ds){if(!ds)return'';var p=ds.split('-');return parseInt(p[2])+'/'+parseInt(p[1])}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(function(){t.classList.remove('on')},3500)}
 
-// ── SETUP BUTTONS ──
+// ── JOURS FÉRIÉS FRANÇAIS ──
+function getEaster(y){
+  // Algorithme de Meeus/Jones/Butcher
+  var a=y%19,b=Math.floor(y/100),c=y%100;
+  var d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25);
+  var g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30;
+  var i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7;
+  var m=Math.floor((a+11*h+22*l)/451);
+  var month=Math.floor((h+l-7*m+114)/31);
+  var day=((h+l-7*m+114)%31)+1;
+  return new Date(y,month-1,day);
+}
+function getFeries(year){
+  var e=getEaster(year);
+  function add(d,n){var r=new Date(d);r.setDate(r.getDate()+n);return r;}
+  function fmt(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  var f={};
+  // Fixes
+  f[year+'-01-01']='Jour de l\'An';
+  f[year+'-05-01']='Fête du Travail';
+  f[year+'-05-08']='Victoire 1945';
+  f[year+'-07-14']='Fête Nationale';
+  f[year+'-08-15']='Assomption';
+  f[year+'-11-01']='Toussaint';
+  f[year+'-11-11']='Armistice';
+  f[year+'-12-25']='Noël';
+  // Mobiles (Pâques)
+  f[fmt(add(e,1))]='Lundi de Pâques';
+  f[fmt(add(e,39))]='Ascension';
+  f[fmt(add(e,50))]='Lundi de Pentecôte';
+  return f;
+}
 function genCode(){
   var ws=['coeur','soleil','bonheur','famille','amour','ensemble'];
   document.getElementById('scode').value=ws[Math.floor(Math.random()*ws.length)]+Math.floor(1000+Math.random()*9000);
@@ -664,19 +702,11 @@ function regSW(){
   navigator.serviceWorker.register('/notre-agenda/sw.js',{scope:'/notre-agenda/'})
     .then(function(r){
       swReg=r;
-      // Enregistrer le sync périodique quotidien (PWA Android/Chrome)
-      if(r.periodicSync){
-        r.periodicSync.register('daily-check',{minInterval:86400000}).catch(function(){});
-      }
+      if(r.periodicSync){r.periodicSync.register('daily-check',{minInterval:86400000}).catch(function(){});}
     }).catch(function(){});
-  // Écouter les messages du SW (réveil en arrière-plan)
   navigator.serviceWorker.addEventListener('message',function(e){
     if(e.data&&e.data.type==='CHECK_REMINDERS'&&G.n1){
-      checkAnnivReminders();
-      checkEvReminders();
-      addWeeklyNotif();
-      renderToday();
-      updateNbdg();
+      checkAnnivReminders();checkEvReminders();addWeeklyNotif();renderToday();updateNbdg();
     }
   });
 }
@@ -829,12 +859,22 @@ function _applyPatch(path,data){
       var ai=G.annivs.findIndex(function(a){return a.id===kv[0]});
       if(ai>=0)Object.assign(G.annivs[ai],kv[1]);else G.annivs.push(kv[1]);
     });
-    // Si patch direct sur un nœud (ex: /courses/id123)
-    if(path.startsWith('/courses/')&&!data.courses){
-      var cid2=path.split('/')[2];
-      var ci2=G.courses.findIndex(function(c){return c.id===cid2});
-      if(ci2>=0)Object.assign(G.courses[ci2],data);else G.courses.push(data);
-    }
+  } else if(path.startsWith('/events/')){
+    var eid2=path.split('/')[2];
+    var ei2=G.events.findIndex(function(e){return e.id===eid2});
+    if(ei2>=0)Object.assign(G.events[ei2],data);else G.events.push(data);
+  } else if(path.startsWith('/todos/')){
+    var tid2=path.split('/')[2];
+    var ti2=G.todos.findIndex(function(t){return t.id===tid2});
+    if(ti2>=0)Object.assign(G.todos[ti2],data);else G.todos.push(data);
+  } else if(path.startsWith('/courses/')){
+    var cid2=path.split('/')[2];
+    var ci2=G.courses.findIndex(function(c){return c.id===cid2});
+    if(ci2>=0)Object.assign(G.courses[ci2],data);else G.courses.push(data);
+  } else if(path.startsWith('/annivs/')){
+    var aid2=path.split('/')[2];
+    var ai2=G.annivs.findIndex(function(a){return a.id===aid2});
+    if(ai2>=0)Object.assign(G.annivs[ai2],data);else G.annivs.push(data);
   }
 
   _afterSync(prev);
@@ -844,10 +884,17 @@ function _applyPatch(path,data){
 function _afterSync(prev){
   // Ne notifier que si l'app est déjà initialisée (pas au premier chargement)
   if(fbInitialized){
-    var newEvs=G.events.filter(function(e){return e.ts>fbLastTs.ev&&e.authorName!==G.n1});
+    // Nouveaux événements
+    var newEvs=G.events.filter(function(e){return e.ts>fbLastTs.ev&&e.authorName!==G.n1&&!e.modifiedBy});
     newEvs.sort(function(a,b){return a.ts-b.ts}).forEach(function(e){
       var msg=e.authorName+' a ajouté "'+e.title+'"'+(e.date?' le '+fmtFR(e.date):'');
       pushN('📅',msg,'À l\'instant');showToast('📅 '+msg);nativeNotif('Notre Agenda',msg);
+    });
+    // Événements modifiés
+    var modEvs=G.events.filter(function(e){return e.ts>fbLastTs.ev&&e.modifiedBy&&e.modifiedBy!==G.n1});
+    modEvs.sort(function(a,b){return a.ts-b.ts}).forEach(function(e){
+      var msg=e.modifiedBy+' a modifié "'+e.title+'"'+(e.date?' le '+fmtFR(e.date):'');
+      pushN('✏️',msg,'À l\'instant');showToast('✏️ '+msg);nativeNotif('Notre Agenda',msg);
     });
     var newTds=G.todos.filter(function(t){return t.ts>fbLastTs.td&&t.authorName!==G.n1&&!t.done});
     newTds.sort(function(a,b){return a.ts-b.ts}).forEach(function(t){
@@ -995,11 +1042,17 @@ function renderCal(){
   var annivD=new Set();
   G.annivs.forEach(function(a){var p=a.date.split('-');var m=parseInt(p[1])-1;var d=parseInt(p[2]);if(m===G.mo){annivD.add(G.yr+'-'+pad(G.mo+1)+'-'+pad(d));}});
   for(var i=0;i<dow;i++){var pd=document.createElement('div');pd.className='cday om pad';pd.appendChild(document.createTextNode(prev-dow+1+i));grid.appendChild(pd);}
+  var feries=getFeries(G.yr);
   for(var day=1;day<=days;day++){
     var ds=G.yr+'-'+pad(G.mo+1)+'-'+pad(day);
     var d=document.createElement('div');d.className='cday';
     if(ds===td)d.classList.add('tod');
     if(ds===G.sel)d.classList.add('sel');
+    // Jour férié
+    if(feries[ds]){
+      d.classList.add('ferie');
+      d.title=feries[ds];
+    }
     // Numéro du jour en premier
     var numEl=document.createElement('span');numEl.textContent=day;d.appendChild(numEl);
     // Points catégories
@@ -1069,9 +1122,12 @@ function selDate(ds){
     return e.date.trim()===ds.trim();
   }).sort(function(a,b){return(a.time||'23:59').localeCompare(b.time||'23:59')});
   var annivs=G.annivs.filter(function(a){return a.date.slice(5)===ds.slice(5)});
+  var feriesYear=getFeries(new Date(ds).getFullYear());
+  var ferieNom=feriesYear[ds]||null;
   var list=document.getElementById('evlist');
-  if(!evs.length&&!annivs.length){list.innerHTML='<div class="noev"><p>Aucun événement<br><span style="font-size:.8rem;opacity:.7">Appuyez sur "+ Ajouter"</span></p></div>';return;}
+  if(!evs.length&&!annivs.length&&!ferieNom){list.innerHTML='<div class="noev"><p>Aucun événement<br><span style="font-size:.8rem;opacity:.7">Appuyez sur "+ Ajouter"</span></p></div>';return;}
   var html='';
+  if(ferieNom)html+='<div class="ferie-banner"><span class="ferie-banner-text">'+ferieNom+'</span></div>';
   annivs.forEach(function(a){
     var age=ageNow(a.date);var as=age?' ('+age+' ans)':'';
     html+='<div class="evc" style="border-left-color:#F5A623;cursor:pointer" onclick="editAnniv(\''+a.id+'\')"><div class="evt" style="color:#9A6500">🎂</div><div class="evb"><div class="evn">'+(AT[a.type]||'🎉')+' '+a.name+as+'</div><div class="evm"><span style="color:#9A6500">'+(AL[a.type]||'Anniversaire')+'</span>'+(a.note?'<span>📝 '+a.note+'</span>':'')+'</div></div><span style="font-size:.7rem;color:var(--muted);align-self:center;padding-left:.3rem">✏️</span></div>';
@@ -1122,9 +1178,10 @@ function saveEv(){
       var ev=G.events[idx];
       ev.title=t;ev.date=d;ev.dateEnd=dend||null;ev.time=document.getElementById('eh').value;
       ev.cat=document.getElementById('ec').value;ev.note=document.getElementById('en').value.trim();
-      ev.reminder=reminder;
+      ev.reminder=reminder;ev.ts=Date.now();ev.modifiedBy=G.n1;
       putFb('events/'+ev.id,ev);
-      pushN('✏️',G.n1+' a modifié "'+t+'"','À l\'instant');
+      var modMsg=G.n1+' a modifié "'+t+'"'+(d?' le '+fmtFR(d):'');
+      pushN('✏️',modMsg,'À l\'instant');
     }
   } else {
     var ev={id:Date.now().toString(),title:t,date:d,dateEnd:dend||null,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
@@ -1247,7 +1304,8 @@ function addCourse(){
   var c={id:Date.now().toString(),name:name,cat:cat,done:false,authorName:G.n1,ts:Date.now()};
   G.courses.push(c);
   document.getElementById('cinp').value='';
-  pushN('🛒',G.n1+' a ajouté "'+name+'" à la liste de courses','À l\'instant');
+  var coursMsg=G.n1+' a ajouté "'+name+'" à la liste de courses';
+  pushN('🛒',coursMsg,'À l\'instant');
   putFb('courses/'+c.id,c);saveLocal();
   renderCourses();updateCbdg();
 }
@@ -1323,7 +1381,8 @@ function addTodo(){
   var todo={id:Date.now().toString(),text:text,done:false,authorName:G.n1,ts:Date.now()};
   G.todos.push(todo);
   document.getElementById('tinp').value='';
-  pushN('✅',G.n1+' a ajouté "'+text+'" à la todo','À l\'instant');
+  var todoMsg=G.n1+' a ajouté "'+text+'" à la todo';
+  pushN('✅',todoMsg,'À l\'instant');
   putFb('todos/'+todo.id,todo);saveLocal();
   renderTodo();updateTbdg();
 }
@@ -1551,7 +1610,8 @@ function addWeeklyNotif(){
     });
 
     // Anniversaires ce jour (comparaison mois/jour)
-    var mmdd=ds.slice(5);
+    var feriesW=getFeries(d.getFullYear());
+    if(feriesW[ds])lines.push(dayLabel+' '+feriesW[ds]);
     G.annivs.forEach(function(a){
       if(a.date.slice(5)===mmdd){
         var age=ageNow(a.date);
@@ -1616,8 +1676,10 @@ function askPush(){
 }
 function nativeNotif(title,body){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
-  if(swReg){swReg.showNotification(title,{body:body,icon:'/notre-agenda/icons/icon-192.png',badge:'/notre-agenda/icons/icon-192.png',vibrate:[100,50,100],tag:'agenda-notif',renotify:true});}
-  else{new Notification(title,{body:body,icon:'/notre-agenda/icons/icon-192.png'});}
+  var tag='agenda-'+Date.now();
+  var opts={body:body,icon:'/notre-agenda/icons/icon-192.png',badge:'/notre-agenda/icons/icon-192.png',vibrate:[100,50,100],tag:tag,renotify:true};
+  if(swReg){swReg.showNotification(title,opts);}
+  else{new Notification(title,opts);}
 }
 
 // ── REPRISE D'ACTIVITÉ ──
