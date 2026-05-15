@@ -278,6 +278,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 /* TOAST */
 .toast{position:fixed;bottom:calc(1.5rem + var(--sb));left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:#fff;padding:.75rem 1.25rem;border-radius:14px;font-size:.85rem;transition:transform .3s;z-index:300;white-space:nowrap;max-width:calc(100vw - 2rem);overflow:hidden;text-overflow:ellipsis}
 .toast.on{transform:translateX(-50%) translateY(0)}
+/* ── THEME PICKER ── */
+#mtheme{position:fixed;inset:0;z-index:250;display:flex;align-items:flex-end;pointer-events:none;opacity:0;transition:opacity .25s}
+#mtheme.on{pointer-events:all;opacity:1}
+#mtheme-bg{position:absolute;inset:0;background:rgba(44,43,43,.45);backdrop-filter:blur(3px)}
+#mtheme-sheet{position:relative;z-index:1;width:100%;background:var(--cream);border-radius:24px 24px 0 0;padding:1.5rem 1.25rem calc(1.5rem + var(--sb));transform:translateY(100%);transition:transform .32s cubic-bezier(.32,0,.15,1)}
+#mtheme.on #mtheme-sheet{transform:none}
+.tpick-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--dark);margin-bottom:1.5rem;text-align:center}
+.tpick-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem}
+.tpick-opt{display:flex;flex-direction:column;align-items:center;gap:.45rem;cursor:pointer;padding:.6rem .25rem;border-radius:16px;border:2px solid transparent;transition:all .15s}
+.tpick-opt.on{border-color:var(--rose);background:var(--rose-l)}
+.tpick-swatch{width:44px;height:44px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.tpick-lbl{font-size:.68rem;font-weight:600;color:var(--dark);text-align:center}
 </style>
 </head>
 <body>
@@ -328,6 +340,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     <div class="hr">
       <div class="spill" id="spill"><span class="sdot"></span><span id="slbl">En ligne</span></div>
       <button class="ibtn" id="nbtn" onclick="toggleNotif()">🔔<span class="bdg" id="nbdg"></span></button>
+      <button class="ibtn" onclick="openTheme()" title="Thème">🎨</button>
       <button class="ibtn" onclick="doLogout()" title="Paramètres">⚙️</button>
       <button class="abtn" id="addbtn" onclick="clickAdd()">+ Ajouter</button>
     </div>
@@ -1752,6 +1765,52 @@ document.addEventListener('visibilitychange', function(){
 });
 
 // Date set dynamically when modal opens
+
+// ── THÈMES ───────────────────────────────────────────────────────────────────
+
+var THEMES = {
+  rosee:   { label:'Rosée',   swatch:'#D4788A', '--rose':'#D4788A','--rose-l':'#F7E8EC','--rose-d':'#A84F61','--sage':'#7A9E8E','--sage-l':'#EAF2EE','--cream':'#FBF8F4' },
+  menthe:  { label:'Menthe',  swatch:'#4A9E7A', '--rose':'#4A9E7A','--rose-l':'#DFF5EC','--rose-d':'#2D7A58','--sage':'#7A8E9E','--sage-l':'#DFF0F5','--cream':'#F4FCF7' },
+  ciel:    { label:'Ciel',    swatch:'#4A85C0', '--rose':'#4A85C0','--rose-l':'#E0EEF8','--rose-d':'#2A5F95','--sage':'#7AAAC0','--sage-l':'#E0F0F8','--cream':'#F4F8FD' },
+  lavande: { label:'Lavande', swatch:'#8A6ABF', '--rose':'#8A6ABF','--rose-l':'#EDE8F8','--rose-d':'#6248A0','--sage':'#9A8ABF','--sage-l':'#F0EEF8','--cream':'#F8F6FD' },
+  peche:   { label:'Pêche',   swatch:'#E0825A', '--rose':'#E0825A','--rose-l':'#FCEEE8','--rose-d':'#B85A35','--sage':'#C09A5A','--sage-l':'#FAF0E0','--cream':'#FDF7F4' },
+};
+
+function applyTheme(name, save){
+  var t=THEMES[name]; if(!t)return;
+  var s=document.documentElement.style;
+  ['--rose','--rose-l','--rose-d','--sage','--sage-l','--cream'].forEach(function(v){s.setProperty(v,t[v]);});
+  if(save) localStorage.setItem('ag_theme',name);
+  document.querySelectorAll('.tpick-opt').forEach(function(el){el.classList.toggle('on',el.dataset.t===name);});
+}
+
+function openTheme(){
+  var saved=localStorage.getItem('ag_theme')||'rosee';
+  var grid=document.getElementById('tpick-grid');
+  grid.innerHTML=Object.keys(THEMES).map(function(k){
+    var t=THEMES[k];
+    return '<div class="tpick-opt'+(k===saved?' on':'')+'" data-t="'+k+'" onclick="applyTheme(\''+k+'\',true)">'
+      +'<div class="tpick-swatch" style="background:'+t.swatch+'"></div>'
+      +'<span class="tpick-lbl">'+t.label+'</span>'
+      +'</div>';
+  }).join('');
+  document.getElementById('mtheme').classList.add('on');
+}
+
+function closeTheme(){document.getElementById('mtheme').classList.remove('on');}
+
+// Appliquer le thème sauvegardé dès le chargement
+(function(){var t=localStorage.getItem('ag_theme'); if(t&&THEMES[t])applyTheme(t,false);})();
 </script>
+
+<!-- Modal thème -->
+<div id="mtheme">
+  <div id="mtheme-bg" onclick="closeTheme()"></div>
+  <div id="mtheme-sheet">
+    <div class="tpick-title">Choisir un thème</div>
+    <div class="tpick-grid" id="tpick-grid"></div>
+  </div>
+</div>
+
 </body>
 </html>
