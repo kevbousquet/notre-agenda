@@ -1295,6 +1295,8 @@ function doDuplicate(){
 }
 function delEv(id){
   if(!confirm('Supprimer cet événement ?'))return;
+  var ev=G.events.find(function(e){return e.id===id});
+  if(ev) notifyPartner('🗑️ Notre Agenda',G.n1+' a supprimé "'+ev.title+'"');
   G.events=G.events.filter(function(e){return e.id!==id});
   delFb('events/'+id);saveLocal();
   renderCal();if(G.sel)selDate(G.sel);
@@ -1323,6 +1325,8 @@ function toggleCourse(id){
   renderCourses();updateCbdg();
 }
 function delCourse(id){
+  var cr=G.courses.find(function(c){return c.id===id});
+  if(cr) notifyPartner('🗑️ Notre Agenda',G.n1+' a supprimé "'+cr.name+'" des courses');
   G.courses=G.courses.filter(function(c){return c.id!==id});
   delFb('courses/'+id);saveLocal();
   renderCourses();updateCbdg();
@@ -1401,6 +1405,8 @@ function toggleTodo(id){
   renderTodo();updateTbdg();
 }
 function delTodo(id){
+  var td=G.todos.find(function(t){return t.id===id});
+  if(td) notifyPartner('🗑️ Notre Agenda',G.n1+' a supprimé "'+td.text+'" de la todo');
   G.todos=G.todos.filter(function(t){return t.id!==id});
   delFb('todos/'+id);saveLocal();
   renderTodo();updateTbdg();
@@ -1500,6 +1506,8 @@ function editAnniv(id){
   openM('mann');
 }
 function delAnniv(id){
+  var an=G.annivs.find(function(a){return a.id===id});
+  if(an) notifyPartner('🗑️ Notre Agenda',G.n1+' a supprimé l\'anniversaire de '+an.name);
   G.annivs=G.annivs.filter(function(a){return a.id!==id});
   delFb('annivs/'+id);saveLocal();
   renderAnniv();updateAbdg();
