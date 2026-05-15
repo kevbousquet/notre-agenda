@@ -96,6 +96,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem}
 .cnav{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center}
 .cnav:active{background:var(--rose-l)}
+@keyframes calSlidL{from{transform:translateX(45px);opacity:0}to{transform:none;opacity:1}}
+@keyframes calSlidR{from{transform:translateX(-45px);opacity:0}to{transform:none;opacity:1}}
+.cal-slide-l{animation:calSlidL .22s ease}
+.cal-slide-r{animation:calSlidR .22s ease}
 .cmo{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:600}
 .cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center}
 .cdow{font-size:.58rem;font-weight:500;color:var(--muted);text-transform:uppercase;padding:2px 0 6px;letter-spacing:.04em}
@@ -1798,6 +1802,32 @@ function openTheme(){
 }
 
 function closeTheme(){document.getElementById('mtheme').classList.remove('on');}
+
+// ── SWIPE CALENDRIER ─────────────────────────────────────────────────────────
+(function(){
+  var x0=0, y0=0;
+  document.addEventListener('touchstart', function(e){
+    var t=e.target.closest('#panel-agenda .cal');
+    if(!t)return;
+    x0=e.touches[0].clientX;
+    y0=e.touches[0].clientY;
+  },{passive:true});
+  document.addEventListener('touchend', function(e){
+    var t=e.target.closest('#panel-agenda .cal');
+    if(!t)return;
+    var dx=e.changedTouches[0].clientX-x0;
+    var dy=e.changedTouches[0].clientY-y0;
+    if(Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)*1.5) swipeMonth(dx<0?1:-1);
+  },{passive:true});
+})();
+
+function swipeMonth(d){
+  var grid=document.getElementById('cgrid');
+  grid.classList.remove('cal-slide-l','cal-slide-r');
+  void grid.offsetWidth;
+  chMo(d);
+  grid.classList.add(d>0?'cal-slide-l':'cal-slide-r');
+}
 
 // Appliquer le thème sauvegardé dès le chargement
 (function(){var t=localStorage.getItem('ag_theme'); if(t&&THEMES[t])applyTheme(t,false);})();
