@@ -304,7 +304,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
         <button onclick="genCode()" style="padding:.7rem .9rem;background:var(--sage-l);border:1.5px solid var(--sage);border-radius:12px;cursor:pointer;font-size:.8rem;color:var(--sage);font-family:'DM Sans',sans-serif">🔀</button>
       </div>
     </div>
-    <div class="fbbox">
+    <div class="fbbox" style="display:none">
       <h3>🔥 Synchro temps réel (optionnel)</h3>
       <p>URL Firebase Realtime Database pour synchroniser avec votre partenaire :</p>
       <input type="url" id="fburl" placeholder="https://mon-projet-rtdb.firebasedatabase.app">
@@ -555,6 +555,7 @@ var G = {
 };
 var fbTimer = null, swReg = null;
 var WORKER_URL = 'https://notre-agenda-worker.kevbousquetagenda.workers.dev';
+var DEFAULT_FB  = 'https://notre-agenda-105e6-default-rtdb.europe-west1.firebasedatabase.app';
 var deviceId = localStorage.getItem('_did') || (function(){ var id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2); localStorage.setItem('_did',id); return id; })();
 
 // ── HELPERS ──
@@ -621,7 +622,7 @@ function clickStart(){
   var n1=document.getElementById('n1').value.trim();
   var n2=document.getElementById('n2').value.trim();
   var code=document.getElementById('scode').value.trim();
-  var fb=document.getElementById('fburl').value.trim().replace(/\/$/,'');
+  var fb=document.getElementById('fburl').value.trim().replace(/\/$/,'')||DEFAULT_FB;
   if(!n1){document.getElementById('errmsg').style.display='block';return;}
   if(!code){genCode();code=document.getElementById('scode').value.trim();}
   G.n1=n1||'Moi'; G.n2=n2||'Mon amour'; G.code=code; G.fb=fb; G.demo=false;
@@ -675,7 +676,7 @@ function boot(){
   if(!c||!c.n1||!c.code)return;
 
   try{
-    G.n1=c.n1; G.n2=c.n2||''; G.code=c.code; G.fb=c.fb||''; G.demo=false;
+    G.n1=c.n1; G.n2=c.n2||''; G.code=c.code; G.fb=c.fb||DEFAULT_FB; G.demo=false;
     document.getElementById('n1').value=G.n1;
     document.getElementById('n2').value=G.n2;
     document.getElementById('scode').value=G.code;
