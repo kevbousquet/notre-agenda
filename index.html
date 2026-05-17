@@ -215,11 +215,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .titem.done{opacity:.55}
 .tck{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem}
 .tck.on{background:var(--sage);border-color:var(--sage);color:#fff}
-.ttxt{flex:1;font-size:.9rem}
+.ttxtwrap{flex:1;min-width:0}
+.ttxt{font-size:.9rem}
 .titem.done .ttxt{text-decoration:line-through;color:var(--muted)}
 .tauth{font-size:.7rem;color:var(--muted);white-space:nowrap}
 .tdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;opacity:.4;padding:3px}
 .tdel:active{opacity:1;color:#c94a4a}
+.tadl{display:flex;align-items:center;gap:.5rem;margin-bottom:1rem}
+.tadl label{font-size:.75rem;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.tadl input{flex:1;padding:.55rem .75rem;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.82rem;background:#fff;color:var(--dark);outline:none}
+.tadl input:focus{border-color:var(--rose)}
+.tdlbdg{display:block;font-size:.7rem;margin-top:.2rem}
+.mbr-chip{display:inline-flex;align-items:center;gap:.3rem;background:var(--sage-l);color:var(--sage);border-radius:20px;padding:.25rem .65rem;font-size:.75rem;font-weight:500;margin:.15rem}
+.mbr-del{background:none;border:none;color:var(--sage);cursor:pointer;font-size:.75rem;padding:0;line-height:1}
+.mmbr-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+.mmbr-inp{flex:1;padding:.65rem .9rem;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.9rem;background:#fff;color:var(--dark);outline:none}
+.mmbr-inp:focus{border-color:var(--rose)}
+.mmbr-add{padding:.65rem .9rem;background:var(--rose);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer;white-space:nowrap}
+.mmbr-list{display:flex;flex-wrap:wrap;gap:.3rem;min-height:2rem;margin-bottom:.5rem}
 .tempt2{background:var(--rose-l);border-radius:14px;padding:1.5rem;text-align:center}
 .tempt2 p{color:var(--rose-d);font-size:.88rem;line-height:1.5}
 
@@ -344,6 +357,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
     <div class="hr">
       <div class="spill" id="spill"><span class="sdot"></span><span id="slbl">En ligne</span></div>
       <button class="ibtn" id="nbtn" onclick="toggleNotif()">🔔<span class="bdg" id="nbdg"></span></button>
+      <button class="ibtn" onclick="openM('mmembers')" title="Membres">👨‍👩‍👧</button>
       <button class="ibtn" onclick="openTheme()" title="Thème">🎨</button>
       <button class="ibtn" onclick="doLogout()" title="Paramètres">⚙️</button>
       <button class="abtn" id="addbtn" onclick="clickAdd()">+ Ajouter</button>
@@ -436,6 +450,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
           <input class="tinp" id="tinp" placeholder="Ajouter une tâche..." onkeydown="if(event.key==='Enter')addTodo()">
           <button class="tabtn" onclick="addTodo()">+ Ajouter</button>
         </div>
+        <div class="tadl">
+          <label>⏰ Deadline</label><input type="date" id="tdl">
+        </div>
         <div class="tcats">
           <button class="tcat on" onclick="filterT('all',this)">Tout</button>
           <button class="tcat" onclick="filterT('todo',this)">À faire</button>
@@ -472,6 +489,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
       </select>
     </div>
     <div class="mf"><label>Note</label><textarea id="en" rows="2" placeholder="Détails..."></textarea></div>
+    <div class="mf" id="emember-wrap">
+      <label>👤 Attribuer à</label>
+      <select id="emember"><option value="">— Personne —</option></select>
+    </div>
     <div class="mf" style="background:var(--sage-l);border-radius:12px;padding:.85rem">
       <label style="color:var(--sage)">🔔 Rappel</label>
       <select id="er" style="background:#fff;border-color:var(--sage)">
@@ -545,6 +566,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
   </div>
 </div>
 
+<!-- MODAL MEMBRES -->
+<div class="mbg" id="mmembers" onclick="if(event.target===this)closeM('mmembers')">
+  <div class="modal">
+    <h2>👨‍👩‍👧 Membres de la famille</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.5">Ajoutez les membres pour les attribuer aux événements.</p>
+    <div class="mmbr-row">
+      <input class="mmbr-inp" id="mmbr-inp" placeholder="Prénom ou nom..." onkeydown="if(event.key==='Enter')addMember()">
+      <button class="mmbr-add" onclick="addMember()">+ Ajouter</button>
+    </div>
+    <div class="mmbr-list" id="mmbr-list"></div>
+    <div class="mac" style="margin-top:.5rem"><button class="mcanc" onclick="closeM('mmembers')">Fermer</button></div>
+  </div>
+</div>
+
 <!-- NOTIF -->
 <div class="nbg" id="nbg" onclick="closeNotif()"></div>
 <div class="npanel" id="npanel">
@@ -566,7 +601,7 @@ const AL={birthday:'Anniversaire',wedding:'Anniv. mariage',other:'Annuel'};
 // ── STATE ──
 var G = {
   n1:'', n2:'', code:'', fb:'', demo:false,
-  events:[], todos:[], annivs:[], notifs:[], courses:[],
+  events:[], todos:[], annivs:[], notifs:[], courses:[], members:[],
   mo: new Date().getMonth(), yr: new Date().getFullYear(),
   sel: null, tab:'agenda', tf:'all', cf:'all'
 };
@@ -830,6 +865,7 @@ function _applyPut(path,data){
     G.todos  = data&&data.todos  ? Object.values(data.todos)  : [];
     G.annivs = data&&data.annivs ? Object.values(data.annivs) : [];
     G.courses= data&&data.courses? Object.values(data.courses): [];
+    G.members= data&&data.members? Object.values(data.members): [];
   } else if(path==='/events'){
     G.events = data ? Object.values(data) : [];
   } else if(path.startsWith('/events/')){
@@ -854,6 +890,8 @@ function _applyPut(path,data){
     var cid=path.split('/')[2];
     if(data===null){G.courses=G.courses.filter(function(c){return c.id!==cid});}
     else{var ci=G.courses.findIndex(function(c){return c.id===cid});if(ci>=0)G.courses[ci]=data;else G.courses.push(data);}
+  } else if(path==='/members'){
+    G.members = data ? Object.values(data) : [];
   }
 
   _afterSync(prev);
@@ -896,6 +934,8 @@ function _applyPatch(path,data){
     var aid2=path.split('/')[2];
     var ai2=G.annivs.findIndex(function(a){return a.id===aid2});
     if(ai2>=0)Object.assign(G.annivs[ai2],data);else G.annivs.push(data);
+  } else if(path==='/members'){
+    G.members = data ? Object.values(data) : [];
   }
 
   _afterSync(prev);
@@ -949,6 +989,7 @@ function _afterSync(prev){
   updateTbdg();
   updateAbdg();
   updateCbdg();
+  renderMembersSelect();
   // Notif quotidienne après le 1er sync Firebase (données réelles disponibles)
   if(!fbInitialized){
     addDailyNotif();
@@ -1008,6 +1049,7 @@ function loadLocal(){
     }).filter(function(a){return a!==null;});
     G.notifs=d.notifs||[];
     G.courses=d.courses||[];
+    G.members=d.members||[];
     if(d.fbLastTs){fbLastTs.ev=d.fbLastTs.ev||0;fbLastTs.td=d.fbLastTs.td||0;fbLastTs.an=d.fbLastTs.an||0;fbLastTs.cr=d.fbLastTs.cr||0;}
     // Initialiser fbLastTs avec les timestamps max des données locales si pas encore fait
     if(!fbLastTs.ev)G.events.forEach(function(e){if((e.ts||0)>fbLastTs.ev)fbLastTs.ev=e.ts;});
@@ -1017,7 +1059,7 @@ function loadLocal(){
   }catch(e){G.events=[];G.todos=[];G.annivs=[];G.notifs=[];}
 }
 function saveLocal(){
-  try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,annivs:G.annivs,notifs:G.notifs,courses:G.courses,fbLastTs:fbLastTs}))}catch(e){}
+  try{localStorage.setItem('ag_'+G.code,JSON.stringify({events:G.events,todos:G.todos,annivs:G.annivs,notifs:G.notifs,courses:G.courses,members:G.members,fbLastTs:fbLastTs}))}catch(e){}
 }
 
 // ── TABS ──
@@ -1170,6 +1212,7 @@ function selDate(ds){
       +'<div class="evm">'
       +'<span class="catbdg catbdg-'+cat+'">'+(CL[cat]||'Autre')+'</span>'
       +'<span><span class="adot" style="background:'+(ev.authorName===G.n1?'var(--rose)':'var(--sage)')+'"></span>'+ev.authorName+'</span>'
+      +(ev.member?'<span>👤 '+getMemberName(ev.member)+'</span>':'')
       +duree
       +(ev.note?'<span>📝 '+ev.note+'</span>':'')
       +(ev.reminder&&ev.reminder!=='0'?'<span>🔔 '+(ev.reminder==='1'?'Rappel veille':ev.reminder==='0s'?'Rappel matin':'Rappel '+ev.reminder+'j avant')+'</span>':'')
@@ -1183,7 +1226,11 @@ function selDate(ds){
 function chMo(d){G.mo+=d;if(G.mo>11){G.mo=0;G.yr++;}if(G.mo<0){G.mo=11;G.yr--;}renderCal();}
 
 // ── EVENTS ──
-function openM(id){document.getElementById(id).classList.add('on');}
+function openM(id){
+  document.getElementById(id).classList.add('on');
+  if(id==='mev')renderMembersSelect();
+  if(id==='mmembers')renderMembersInModal();
+}
 function closeM(id){document.getElementById(id).classList.remove('on');}
 function saveEv(){
   var t=document.getElementById('et').value.trim();
@@ -1199,6 +1246,7 @@ function saveEv(){
       var ev=G.events[idx];
       ev.title=t;ev.date=d;ev.dateEnd=dend||null;ev.time=document.getElementById('eh').value;
       ev.cat=document.getElementById('ec').value;ev.note=document.getElementById('en').value.trim();
+      ev.member=document.getElementById('emember').value||null;
       ev.reminder=reminder;ev.ts=Date.now();ev.modifiedBy=G.n1;
       putFb('events/'+ev.id,ev);
       var modMsg=G.n1+' a modifié "'+t+'"'+(d?' le '+fmtFR(d):'');
@@ -1206,7 +1254,7 @@ function saveEv(){
       notifyPartner('✏️ Notre Agenda',modMsg);
     }
   } else {
-    var ev={id:Date.now().toString(),title:t,date:d,dateEnd:dend||null,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),reminder:reminder,authorName:G.n1,ts:Date.now()};
+    var ev={id:Date.now().toString(),title:t,date:d,dateEnd:dend||null,time:document.getElementById('eh').value,cat:document.getElementById('ec').value,note:document.getElementById('en').value.trim(),member:document.getElementById('emember').value||null,reminder:reminder,authorName:G.n1,ts:Date.now()};
     G.events.push(ev);
     var msg=G.n1+' a ajouté "'+t+'"'+(dend?' du '+fmtFR(d)+' au '+fmtFR(dend):' le '+fmtFR(d));
     pushN('📅',msg,'À l\'instant');
@@ -1220,6 +1268,7 @@ function _resetEvModal(){
   document.getElementById('et').value='';document.getElementById('eh').value='';
   document.getElementById('edend').value='';
   document.getElementById('en').value='';document.getElementById('er').value='0';
+  document.getElementById('emember').value='';
   document.getElementById('mev-title').textContent='📅 Nouvel événement';
   document.getElementById('mev-save').textContent='Enregistrer 💾';
 }
@@ -1234,6 +1283,7 @@ function editEv(id){
   document.getElementById('ec').value=ev.cat||'autre';
   document.getElementById('en').value=ev.note||'';
   document.getElementById('er').value=ev.reminder||'0';
+  document.getElementById('emember').value=ev.member||'';
   document.getElementById('mev-title').textContent='✏️ Modifier l\'événement';
   document.getElementById('mev-save').textContent='Mettre à jour 💾';
   openM('mev');
@@ -1317,6 +1367,48 @@ function delEv(id){
   G.events=G.events.filter(function(e){return e.id!==id});
   delFb('events/'+id);saveLocal();
   renderCal();if(G.sel)selDate(G.sel);
+}
+
+// ── MEMBRES ──
+function getMemberName(id){
+  var m=G.members.find(function(m){return m.id===id});
+  return m?m.name:id;
+}
+function renderMembersSelect(){
+  var sel=document.getElementById('emember');
+  if(!sel)return;
+  var val=sel.value;
+  sel.innerHTML='<option value="">— Personne —</option>'
+    +G.members.map(function(m){return'<option value="'+m.id+'">'+m.name+'</option>';}).join('');
+  sel.value=val;
+}
+function renderMembersInModal(){
+  var list=document.getElementById('mmbr-list');
+  if(!list)return;
+  if(!G.members.length){list.innerHTML='<span style="font-size:.82rem;color:var(--muted)">Aucun membre — ajoutez un prénom ci-dessus.</span>';return;}
+  list.innerHTML=G.members.map(function(m){
+    return '<span class="mbr-chip">'+m.name+'<button class="mbr-del" onclick="delMember(\''+m.id+'\')">✕</button></span>';
+  }).join('');
+}
+function addMember(){
+  var inp=document.getElementById('mmbr-inp');
+  var name=inp.value.trim();
+  if(!name)return;
+  var id=Date.now().toString();
+  G.members.push({id:id,name:name});
+  inp.value='';
+  saveMembersToFb();saveLocal();
+  renderMembersInModal();renderMembersSelect();
+}
+function delMember(id){
+  G.members=G.members.filter(function(m){return m.id!==id});
+  saveMembersToFb();saveLocal();
+  renderMembersInModal();renderMembersSelect();
+}
+function saveMembersToFb(){
+  if(!G.members.length){delFb('members');return;}
+  var map={};G.members.forEach(function(m){map[m.id]=m;});
+  putFb('members',map);
 }
 
 // ── LISTE DE COURSES ──
@@ -1406,9 +1498,11 @@ function updateCbdg(){
 function addTodo(){
   var text=document.getElementById('tinp').value.trim();
   if(!text)return;
-  var todo={id:Date.now().toString(),text:text,done:false,authorName:G.n1,ts:Date.now()};
+  var dl=document.getElementById('tdl').value||null;
+  var todo={id:Date.now().toString(),text:text,done:false,deadline:dl||null,authorName:G.n1,ts:Date.now()};
   G.todos.push(todo);
   document.getElementById('tinp').value='';
+  document.getElementById('tdl').value='';
   var todoMsg=G.n1+' a ajouté "'+text+'" à la todo';
   pushN('✅',todoMsg,'À l\'instant');
   notifyPartner('✅ Notre Agenda',todoMsg);
@@ -1449,7 +1543,16 @@ function renderTodo(){
   list.innerHTML=html;
 }
 function tcrd(t){
-  return '<div class="titem'+(t.done?' done':'')+'"><button class="tck'+(t.done?' on':'')+'" onclick="toggleTodo(\''+t.id+'\')">'+(t.done?'✓':'')+'</button><span class="ttxt">'+t.text+'</span><span class="tauth" style="color:'+(t.authorName===G.n1?'var(--rose)':'var(--sage)')+'">'+( t.authorName===G.n1?'Moi':t.authorName)+'</span><button class="tdel" onclick="delTodo(\''+t.id+'\')">✕</button></div>';
+  var dlHtml='';
+  if(t.deadline&&!t.done){
+    var now2=new Date();now2.setHours(0,0,0,0);
+    var dlD=new Date(t.deadline);dlD.setHours(0,0,0,0);
+    var diff=Math.round((dlD-now2)/86400000);
+    var dlTxt=diff<0?'En retard':(diff===0?'Aujourd\'hui':(diff===1?'Demain':fmtFR(t.deadline)));
+    var dlColor=diff<0?'#c94a4a':(diff===0?'#E07C24':'var(--muted)');
+    dlHtml='<span class="tdlbdg" style="color:'+dlColor+'">⏰ '+dlTxt+'</span>';
+  }
+  return '<div class="titem'+(t.done?' done':'')+'"><button class="tck'+(t.done?' on':'')+'" onclick="toggleTodo(\''+t.id+'\')">'+(t.done?'✓':'')+'</button><div class="ttxtwrap"><span class="ttxt">'+t.text+'</span>'+dlHtml+'</div><span class="tauth" style="color:'+(t.authorName===G.n1?'var(--rose)':'var(--sage)')+'">'+( t.authorName===G.n1?'Moi':t.authorName)+'</span><button class="tdel" onclick="delTodo(\''+t.id+'\')">✕</button></div>';
 }
 function updateTbdg(){
   var n=G.todos.filter(function(t){return!t.done}).length;
