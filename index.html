@@ -307,6 +307,57 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);
 .tpick-opt.on{border-color:var(--rose);background:var(--rose-l)}
 .tpick-swatch{width:44px;height:44px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .tpick-lbl{font-size:.68rem;font-weight:600;color:var(--dark);text-align:center}
+
+/* ── RESPONSIVE — petits écrans ── */
+html,body{overflow-x:hidden}
+#app,#main{overflow-x:hidden}
+.hdr h1{min-width:0;flex-shrink:1;overflow:hidden}
+#apptitle-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 400px : compression légère du header */
+@media(max-width:400px){
+  .hdr{padding:.6rem .9rem;padding-top:calc(.6rem + var(--st));}
+  .hr{gap:.22rem;}
+  .ibtn{width:30px;height:30px;font-size:.78rem;}
+  .abtn{padding:.38rem .65rem;font-size:.77rem;}
+  #slbl{display:none;}
+  .spill{padding:.22rem .42rem;}
+}
+/* 360px : compression forte — masquer les éléments non essentiels */
+@media(max-width:360px){
+  .hdr{padding:.55rem .6rem;padding-top:calc(.55rem + var(--st));}
+  .hdr h1{font-size:.85rem;}
+  .hdr h1 svg{display:none;}
+  .ibtn{width:27px;height:27px;font-size:.7rem;}
+  .abtn{padding:.3rem .5rem;font-size:.72rem;}
+  .spill{display:none;}
+  /* Calendrier */
+  .cmo{font-size:.84rem;}
+  .cdow{font-size:.5rem;letter-spacing:.02em;}
+  .cday{font-size:.66rem;}
+  /* Sections avec marges réduites */
+  .today-box{margin:.75rem .75rem .6rem;}
+  .cal{margin:0 .75rem .6rem;}
+  .evwrap{margin:0 .75rem;}
+  .twrap,.cwrap,.awrap{padding:.75rem;}
+  /* Rang ajout tâche : empiler */
+  .tarow{flex-wrap:wrap;}
+  .tinp{flex:1 1 100%;}
+  .tabtn{flex:1;}
+  /* Rang ajout course : empiler */
+  .crow{flex-wrap:wrap;}
+  .cinp{flex:1 1 100%;}
+  .ccat-sel{flex:1;}
+  /* Modales : 2 colonnes → 1 colonne sur très petit écran */
+  .mrow{grid-template-columns:1fr;}
+  .modal{padding:1.25rem 1.1rem;padding-bottom:calc(1.25rem + var(--sb));}
+}
+/* 320px : ultra compact */
+@media(max-width:320px){
+  .ibtn{width:25px;height:25px;font-size:.65rem;}
+  .abtn{padding:.28rem .4rem;font-size:.68rem;}
+  .tabs .tab{font-size:.68rem;padding:.6rem .3rem;}
+  .tab-ic{font-size:.95rem;}
+}
 </style>
 </head>
 <body>
