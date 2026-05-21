@@ -423,7 +423,7 @@ html,body{overflow-x:hidden}
   </div>
   <div id="main">
     <div class="pbanner" id="pbanner">
-      <p>🔔 Activer les notifications pour être alerté même quand l'app est fermée.</p>
+      <p id="pbanner-txt">🔔 Activer les notifications pour être alerté même quand l'app est fermée.</p>
       <button onclick="askPush()">Activer</button>
       <button class="pdism" onclick="document.getElementById('pbanner').classList.remove('on')">✕</button>
     </div>
@@ -809,7 +809,18 @@ function regSW(){
     .then(function(r){
       swReg=r;
       if(r.periodicSync){r.periodicSync.register('daily-check',{minInterval:86400000}).catch(function(){});}
-      if(Notification.permission==='granted'&&G.code) subscribePush(r);
+      if(Notification.permission==='granted'&&G.code){
+        // Vérifier si la subscription existe encore — sinon montrer le banner
+        r.pushManager.getSubscription().then(function(sub){
+          if(sub&&sub.endpoint){
+            subscribePush(r); // ré-enregistre en Firebase sans recréer
+          } else {
+            // Subscription perdue (ex: mise à jour SW) → bannière de réactivation
+            document.getElementById('pbanner-txt').textContent='🔔 Vos notifications ont été réinitialisées — réactivez-les.';
+            document.getElementById('pbanner').classList.add('on');
+          }
+        }).catch(function(){subscribePush(r);});
+      }
     }).catch(function(){});
   navigator.serviceWorker.addEventListener('message',function(e){
     if(e.data&&e.data.type==='CHECK_REMINDERS'&&G.n1){
@@ -1858,9 +1869,15 @@ function checkPush(){
 }
 function askPush(){
   if(!('Notification' in window)){showToast('Notifications non supportées');return;}
+  document.getElementById('pbanner').classList.remove('on');
+  if(Notification.permission==='granted'){
+    // Permission déjà accordée mais subscription perdue → forcer la recréation
+    if(swReg&&G.code) forceResubscribe(swReg);
+    return;
+  }
   Notification.requestPermission().then(function(p){
-    document.getElementById('pbanner').classList.remove('on');
-    if(p==='granted'){showToast('✅ Notifications activées !');nativeNotif('Notre Agenda','Notifications activées !');if(swReg&&G.code)subscribePush(swReg);}
+    if(p==='granted'){showToast('✅ Notifications activées !');nativeNotif('Notre Agenda','Notifications activées !');if(swReg&&G.code)forceResubscribe(swReg);}
+    else{showToast('❌ Notifications refusées — vérifiez les paramètres');}
   });
 }
 function nativeNotif(title,body){
@@ -1871,6 +1888,34 @@ function nativeNotif(title,body){
   else{new Notification(title,opts);}
 }
 function subscribePush(reg){
+  if(!G.code||!WORKER_URL)return;
+  var r2=reg||swReg;
+  if(!r2||!r2.pushManager)return;
+  r2.pushManager.getSubscription().then(function(existing){
+    if(existing&&existing.endpoint){
+      // Subscription valide → juste ré-enregistrer dans Firebase (pas de recréation)
+      return _registerSubInFb(existing);
+    }
+    // Pas de subscription → en créer une nouvelle avec la clé VAPID
+    return fetch(WORKER_URL+'/vapid-key')
+      .then(function(r){return r.json();})
+      .then(function(d){
+        return r2.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(d.publicKey)});
+      })
+      .then(function(sub){return _registerSubInFb(sub);});
+  }).catch(function(e){
+    console.error('subscribePush:',e);
+    document.getElementById('pbanner-txt').textContent='🔔 Erreur d\'abonnement — réactivez les notifications.';
+    document.getElementById('pbanner').classList.add('on');
+  });
+}
+function _registerSubInFb(sub){
+  return fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,deviceId:deviceId,subscription:sub.toJSON?sub.toJSON():sub})}).then(function(){
+    console.log('Push subscription enregistrée');
+  });
+}
+// Force re-subscribe complet (unsubscribe + recréation) — utilisé uniquement depuis le bouton manuel
+function forceResubscribe(reg){
   if(!G.code||!WORKER_URL)return;
   var r2=reg||swReg;
   if(!r2||!r2.pushManager)return;
@@ -1885,10 +1930,9 @@ function subscribePush(reg){
         return r2.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:appKey});
       });
     })
-    .then(function(sub){
-      return fetch(WORKER_URL+'/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:G.code,deviceId:deviceId,subscription:sub.toJSON?sub.toJSON():sub})});
-    })
-    .catch(function(e){console.error('subscribePush:',e);});
+    .then(function(sub){return _registerSubInFb(sub);})
+    .then(function(){showToast('✅ Notifications réactivées !');})
+    .catch(function(e){console.error('forceResubscribe:',e);showToast('❌ Erreur lors de la réactivation');});
 }
 function urlB64ToUint8Array(b){
   var p='='.repeat((4-b.length%4)%4),s=(b+p).replace(/-/g,'+').replace(/_/g,'/');
