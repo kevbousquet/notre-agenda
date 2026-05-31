@@ -355,9 +355,20 @@ html,body{overflow-x:hidden}
 @media(max-width:320px){
   .ibtn{width:25px;height:25px;font-size:.65rem;}
   .abtn{padding:.28rem .4rem;font-size:.68rem;}
-  .tabs .tab{font-size:.68rem;padding:.6rem .3rem;}
+  .tabs .tab{font-size:.68px;padding:.6rem .3rem;}
   .tab-ic{font-size:.95rem;}
 }
+
+/* ── VACANCES SCOLAIRES ── */
+.cday.vac{background:rgba(90,170,210,.14)}
+.cday.vac.tod{background:var(--rose);color:#fff}
+.cday.ferie.vac{background:rgba(255,193,7,.13)} /* ferie prime visuellement */
+.cday.hspan.vac,.cday.hspan-start.vac,.cday.hspan-end.vac{background:rgba(90,170,210,.08)!important}
+.vac-banner{background:#E5F4FB;border-radius:12px;padding:.55rem .9rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.55rem;font-size:.82rem;font-weight:600;color:#1A6080;overflow:hidden;position:relative}
+.vac-banner::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:#5AB4D6}
+.vac-banner-text{padding-left:.2rem}
+.zone-btn{padding:.35rem .75rem;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:.8rem;font-family:inherit;cursor:pointer;color:var(--muted);font-weight:500;margin:.1rem}
+.zone-btn.on{background:var(--rose-l);border-color:var(--rose);color:var(--rose-d);font-weight:600}
 </style>
 </head>
 <body>
@@ -655,6 +666,15 @@ html,body{overflow-x:hidden}
       <div style="font-size:.68rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">Compte</div>
       <button onclick="closeM('msettings');doLogout();" style="width:100%;padding:.7rem;background:none;border:1.5px solid #e8b4b4;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.88rem;cursor:pointer;color:#c94a4a">↩️ Se déconnecter</button>
     </div>
+    <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
+      <div style="font-size:.68rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">Vacances scolaires</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">
+        <button class="zone-btn" id="zone-btn-A" onclick="setZone('A')">Zone A</button>
+        <button class="zone-btn" id="zone-btn-B" onclick="setZone('B')">Zone B</button>
+        <button class="zone-btn" id="zone-btn-C" onclick="setZone('C')">Zone C</button>
+      </div>
+      <p style="font-size:.73rem;color:var(--muted);line-height:1.4">Affiche les périodes de vacances sur le calendrier.</p>
+    </div>
     <div class="mac" style="margin-top:1rem"><button class="mcanc" onclick="closeM('msettings')">Fermer</button></div>
   </div>
 </div>
@@ -681,6 +701,10 @@ var fbTimer = null, swReg = null;
 var WORKER_URL = 'https://notre-agenda-worker.kevbousquetagenda.workers.dev';
 var DEFAULT_FB  = 'https://notre-agenda-105e6-default-rtdb.europe-west1.firebasedatabase.app';
 var deviceId = localStorage.getItem('_did') || (function(){ var id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2); localStorage.setItem('_did',id); return id; })();
+
+// ── VACANCES SCOLAIRES ──
+var G_zone = localStorage.getItem('ag_zone') || 'B';
+var G_vacances = []; // [{name, start, end}]
 
 // ── HELPERS ──
 function today(){
@@ -780,6 +804,7 @@ function boot(){
   updateTbdg();
   updateAbdg();
   updateCbdg();
+  loadVacances();
   regSW();
 }
 
@@ -1166,6 +1191,47 @@ function clickAdd(){
   else{document.getElementById('tinp').focus();document.getElementById('tinp').scrollIntoView({behavior:'smooth'});}
 }
 
+// ── VACANCES SCOLAIRES ──
+function loadVacances(){
+  var year=new Date().getFullYear();
+  var cacheKey='vac_'+G_zone+'_'+year;
+  var cacheTs=parseInt(localStorage.getItem(cacheKey+'_ts')||'0');
+  if(Date.now()-cacheTs<30*86400000){
+    var cached=localStorage.getItem(cacheKey);
+    if(cached){try{G_vacances=JSON.parse(cached);renderCal();return;}catch(e){}}
+  }
+  var startYear=new Date().getMonth()>=8?new Date().getFullYear():new Date().getFullYear()-1;
+  var sy1=startYear+'-'+(startYear+1),sy2=(startYear+1)+'-'+(startYear+2);
+  var where='annee_scolaire in ("'+sy1+'","'+sy2+'")';
+  var url='https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records'
+    +'?where='+encodeURIComponent(where)+'&limit=100&select=description,start_date,end_date,zones,location';
+  fetch(url).then(function(r){return r.json();}).then(function(data){
+    var zStr='Zone '+G_zone;
+    var vacs=(data.results||[])
+      .filter(function(r){var z=(r.zones||'')+(r.location||'');return z.indexOf(zStr)>=0;})
+      .map(function(r){return{name:r.description||'Vacances',start:(r.start_date||'').slice(0,10),end:(r.end_date||'').slice(0,10)};})
+      .filter(function(v){return v.start&&v.end;});
+    G_vacances=vacs;
+    try{localStorage.setItem(cacheKey,JSON.stringify(vacs));localStorage.setItem(cacheKey+'_ts',String(Date.now()));}catch(e){}
+    renderCal();
+  }).catch(function(e){console.warn('loadVacances:',e);});
+}
+function setZone(z){
+  G_zone=z;
+  localStorage.setItem('ag_zone',z);
+  G_vacances=[];
+  loadVacances();
+  renderZoneBtns();
+}
+function isVac(ds){return G_vacances.some(function(v){return ds>=v.start&&ds<=v.end;});}
+function getVacName(ds){var v=G_vacances.find(function(v){return ds>=v.start&&ds<=v.end;});return v?v.name:null;}
+function renderZoneBtns(){
+  ['A','B','C'].forEach(function(z){
+    var btn=document.getElementById('zone-btn-'+z);
+    if(btn)btn.classList.toggle('on',z===G_zone);
+  });
+}
+
 // ── CALENDAR ──
 function renderCal(){
   var grid=document.getElementById('cgrid');
@@ -1199,6 +1265,8 @@ function renderCal(){
       d.classList.add('ferie');
       d.title=feries[ds];
     }
+    // Vacances scolaires
+    if(isVac(ds)){d.classList.add('vac');}
     // Numéro du jour en premier
     var numEl=document.createElement('span');numEl.textContent=day;d.appendChild(numEl);
     // Points catégories
@@ -1249,8 +1317,10 @@ function renderToday(){
   }).sort(function(a,b){return(a.time||'').localeCompare(b.time||'')});
   var annivs=G.annivs.filter(function(a){return a.date.slice(5)===td2.slice(5)});
   var el=document.getElementById('todaystrip');
-  if(!evs.length&&!annivs.length){el.innerHTML='<p class="tempty">Rien de prévu — journée libre 🌸</p>';return;}
+  var vacToday=getVacName(td2);
+  if(!evs.length&&!annivs.length&&!vacToday){el.innerHTML='<p class="tempty">Rien de prévu — journée libre 🌸</p>';return;}
   var html='';
+  if(vacToday)html+='<div class="tev">🏖️ <em>'+vacToday+'</em></div>';
   annivs.forEach(function(a){var age=ageNow(a.date);html+='<div class="tev">🎂 <strong>'+a.name+'</strong>'+(age?' · '+age+' ans':'')+'</div>';});
   html+=evs.map(function(e){
     var suffix=e.dateEnd?' · jusqu\'au '+fmtFR(e.dateEnd):'';
@@ -1271,9 +1341,11 @@ function selDate(ds){
   var feriesYear=getFeries(new Date(ds).getFullYear());
   var ferieNom=feriesYear[ds]||null;
   var list=document.getElementById('evlist');
-  if(!evs.length&&!annivs.length&&!ferieNom){list.innerHTML='<div class="noev"><p>Aucun événement<br><span style="font-size:.8rem;opacity:.7">Appuyez sur "+ Ajouter"</span></p></div>';return;}
+  var vacNom=getVacName(ds);
+  if(!evs.length&&!annivs.length&&!ferieNom&&!vacNom){list.innerHTML='<div class="noev"><p>Aucun événement<br><span style="font-size:.8rem;opacity:.7">Appuyez sur "+ Ajouter"</span></p></div>';return;}
   var html='';
   if(ferieNom)html+='<div class="ferie-banner"><span class="ferie-banner-text">'+ferieNom+'</span></div>';
+  if(vacNom)html+='<div class="vac-banner"><span class="vac-banner-text">🏖️ '+vacNom+'</span></div>';
   annivs.forEach(function(a){
     var age=ageNow(a.date);var as=age?' ('+age+' ans)':'';
     html+='<div class="evc" style="border-left-color:#F5A623;cursor:pointer" onclick="editAnniv(\''+a.id+'\')"><div class="evt" style="color:#9A6500">🎂</div><div class="evb"><div class="evn">'+(AT[a.type]||'🎉')+' '+a.name+as+'</div><div class="evm"><span style="color:#9A6500">'+(AL[a.type]||'Anniversaire')+'</span>'+(a.note?'<span>📝 '+a.note+'</span>':'')+'</div></div><span style="font-size:.7rem;color:var(--muted);align-self:center;padding-left:.3rem">✏️</span></div>';
@@ -1313,7 +1385,7 @@ function openM(id){
   document.getElementById(id).classList.add('on');
   if(id==='mev')renderMembersSelect();
   if(id==='mmembers')renderMembersInModal();
-  if(id==='msettings')refreshPushStatus();
+  if(id==='msettings'){refreshPushStatus();renderZoneBtns();}
 }
 function closeM(id){document.getElementById(id).classList.remove('on');}
 function saveEv(){
