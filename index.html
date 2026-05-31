@@ -636,6 +636,14 @@ html,body{overflow-x:hidden}
 <div class="npanel" id="npanel">
   <div class="nhdr"><h3>Notifications</h3><button class="nclr" onclick="clearN()">Tout effacer</button></div>
   <div id="nlist"></div>
+  <div id="push-status-box" style="margin:.75rem .9rem;padding:.75rem .9rem;background:var(--cream);border-radius:12px;border:1.5px solid var(--border);font-size:.75rem;color:var(--muted)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem">
+      <span id="push-status-lbl">🔔 Vérification push…</span>
+      <button onclick="refreshPushStatus()" style="background:none;border:none;font-size:.82rem;cursor:pointer;color:var(--rose);white-space:nowrap;padding:0">Actualiser</button>
+    </div>
+    <button onclick="sendTestPush()" style="width:100%;padding:.5rem;background:var(--rose);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:500;cursor:pointer">📨 Tester — recevoir une notif</button>
+    <button onclick="document.getElementById('pbanner-txt').textContent=\'🔔 Réactiver les notifications.\';document.getElementById(\'pbanner\').classList.add(\'on\');closeNotif();" style="width:100%;margin-top:.4rem;padding:.5rem;background:none;border:1.5px solid var(--border);border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:.78rem;cursor:pointer;color:var(--muted)">🔄 Ré-abonner push</button>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1852,7 +1860,7 @@ function toggleNotif(){
   var p=document.getElementById('npanel'),bg=document.getElementById('nbg');
   var open=p.classList.contains('on');
   p.classList.toggle('on');bg.classList.toggle('on');
-  if(!open){G.notifs.forEach(function(n){n.read=true});updateNbdg();renderN();}
+  if(!open){G.notifs.forEach(function(n){n.read=true});updateNbdg();renderN();refreshPushStatus();}
 }
 function closeNotif(){document.getElementById('npanel').classList.remove('on');document.getElementById('nbg').classList.remove('on');}
 function renderN(){
@@ -1861,6 +1869,32 @@ function renderN(){
   el.innerHTML=G.notifs.slice(0,30).map(function(n){return'<div class="nitem"><span class="nic">'+n.icon+'</span><div class="ntxt"><p>'+n.text+'</p><span>'+n.time+'</span></div></div>'}).join('');
 }
 function clearN(){G.notifs=[];updateNbdg();renderN();saveLocal();}
+
+function refreshPushStatus(){
+  var lbl=document.getElementById('push-status-lbl');
+  if(!lbl)return;
+  if(!('Notification' in window)){lbl.textContent='❌ Push non supporté sur ce navigateur';return;}
+  var perm=Notification.permission;
+  if(perm==='denied'){lbl.textContent='🚫 Notifications bloquées dans les réglages du navigateur';return;}
+  if(perm==='default'){lbl.textContent='⚠️ Permission non accordée — appuyez sur Activer';return;}
+  if(!swReg||!swReg.pushManager){lbl.textContent='⚠️ Service Worker non prêt';return;}
+  swReg.pushManager.getSubscription().then(function(sub){
+    if(sub&&sub.endpoint){
+      lbl.textContent='✅ Push actif — abonné';
+    } else {
+      lbl.textContent='❌ Aucune subscription — appuyez sur Ré-abonner';
+    }
+  }).catch(function(){lbl.textContent='⚠️ Impossible de vérifier la subscription';});
+}
+function sendTestPush(){
+  if(!G.code||!WORKER_URL){showToast('Code agenda manquant');return;}
+  showToast('📨 Envoi du test…');
+  fetch(WORKER_URL+'/notify',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code:G.code,title:'🔔 Test — Notre Agenda',body:'Les notifications fonctionnent !'})
+  }).then(function(r){return r.json();})
+    .then(function(d){showToast(d.sent>0?'✅ Test envoyé ('+d.sent+' appareil'+(d.sent>1?'s':'')+')':(d.sent===0?'⚠️ Aucun abonné trouvé — ré-abonnez-vous':'❌ Erreur test'));})
+    .catch(function(){showToast('❌ Erreur réseau');});
+}
 
 // ── PUSH NOTIFICATIONS ──
 function checkPush(){
