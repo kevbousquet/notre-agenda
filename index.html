@@ -410,7 +410,7 @@ html,body{overflow-x:hidden}
       <button class="ibtn" id="nbtn" onclick="toggleNotif()">🔔<span class="bdg" id="nbdg"></span></button>
       <button class="ibtn" onclick="openM('mmembers')" title="Membres">👨‍👩‍👧</button>
       <button class="ibtn" onclick="openTheme()" title="Thème">🎨</button>
-      <button class="ibtn" onclick="doLogout()" title="Paramètres">⚙️</button>
+      <button class="ibtn" onclick="openM('msettings')" title="Paramètres">⚙️</button>
       <button class="abtn" id="addbtn" onclick="clickAdd()">+ Ajouter</button>
     </div>
   </header>
@@ -636,13 +636,26 @@ html,body{overflow-x:hidden}
 <div class="npanel" id="npanel">
   <div class="nhdr"><h3>Notifications</h3><button class="nclr" onclick="clearN()">Tout effacer</button></div>
   <div id="nlist"></div>
-  <div id="push-status-box" style="margin:.75rem .9rem;padding:.75rem .9rem;background:var(--cream);border-radius:12px;border:1.5px solid var(--border);font-size:.75rem;color:var(--muted)">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem">
-      <span id="push-status-lbl">🔔 Vérification push…</span>
-      <button onclick="refreshPushStatus()" style="background:none;border:none;font-size:.82rem;cursor:pointer;color:var(--rose);white-space:nowrap;padding:0">Actualiser</button>
+</div>
+
+<!-- MODAL PARAMÈTRES -->
+<div class="mbg" id="msettings" onclick="if(event.target===this)closeM('msettings')">
+  <div class="modal">
+    <h2>⚙️ Paramètres</h2>
+    <div style="margin-bottom:1.2rem">
+      <div style="font-size:.68rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">Notifications push</div>
+      <div style="background:var(--cream);border-radius:12px;padding:.75rem .9rem;margin-bottom:.5rem;font-size:.78rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between">
+        <span id="push-status-lbl">🔔 Vérification…</span>
+        <button onclick="refreshPushStatus()" style="background:none;border:none;font-size:.78rem;cursor:pointer;color:var(--rose);padding:0">Actualiser</button>
+      </div>
+      <button onclick="sendTestPush()" style="width:100%;padding:.7rem;background:var(--rose);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;margin-bottom:.45rem">📨 Tester les notifications</button>
+      <button onclick="closeM('msettings');document.getElementById('pbanner-txt').textContent='🔔 Réactiver les notifications.';document.getElementById('pbanner').classList.add('on');" style="width:100%;padding:.7rem;background:none;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.88rem;cursor:pointer;color:var(--muted)">🔄 Ré-abonner push</button>
     </div>
-    <button onclick="sendTestPush()" style="width:100%;padding:.5rem;background:var(--rose);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:500;cursor:pointer">📨 Tester — recevoir une notif</button>
-    <button onclick="document.getElementById('pbanner-txt').textContent=\'🔔 Réactiver les notifications.\';document.getElementById(\'pbanner\').classList.add(\'on\');closeNotif();" style="width:100%;margin-top:.4rem;padding:.5rem;background:none;border:1.5px solid var(--border);border-radius:10px;font-family:\'DM Sans\',sans-serif;font-size:.78rem;cursor:pointer;color:var(--muted)">🔄 Ré-abonner push</button>
+    <div style="border-top:1px solid var(--border);padding-top:1rem">
+      <div style="font-size:.68rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">Compte</div>
+      <button onclick="closeM('msettings');doLogout();" style="width:100%;padding:.7rem;background:none;border:1.5px solid #e8b4b4;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.88rem;cursor:pointer;color:#c94a4a">↩️ Se déconnecter</button>
+    </div>
+    <div class="mac" style="margin-top:1rem"><button class="mcanc" onclick="closeM('msettings')">Fermer</button></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -1300,6 +1313,7 @@ function openM(id){
   document.getElementById(id).classList.add('on');
   if(id==='mev')renderMembersSelect();
   if(id==='mmembers')renderMembersInModal();
+  if(id==='msettings')refreshPushStatus();
 }
 function closeM(id){document.getElementById(id).classList.remove('on');}
 function saveEv(){
@@ -1860,7 +1874,7 @@ function toggleNotif(){
   var p=document.getElementById('npanel'),bg=document.getElementById('nbg');
   var open=p.classList.contains('on');
   p.classList.toggle('on');bg.classList.toggle('on');
-  if(!open){G.notifs.forEach(function(n){n.read=true});updateNbdg();renderN();refreshPushStatus();}
+  if(!open){G.notifs.forEach(function(n){n.read=true});updateNbdg();renderN();}
 }
 function closeNotif(){document.getElementById('npanel').classList.remove('on');document.getElementById('nbg').classList.remove('on');}
 function renderN(){
