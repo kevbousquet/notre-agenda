@@ -1202,7 +1202,7 @@ function clickAdd(){
 // ── VACANCES SCOLAIRES ──
 function loadVacances(){
   var year=new Date().getFullYear();
-  var cacheKey='vac_'+G_zone+'_'+year;
+  var cacheKey='vac2_'+G_zone+'_'+year;
   var cacheTs=parseInt(localStorage.getItem(cacheKey+'_ts')||'0');
   if(Date.now()-cacheTs<30*86400000){
     var cached=localStorage.getItem(cacheKey);
@@ -1214,11 +1214,21 @@ function loadVacances(){
   var url='https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records'
     +'?where='+encodeURIComponent(where)+'&limit=100&select=description,start_date,end_date,zones,location';
   fetch(url).then(function(r){return r.json();}).then(function(data){
-    var zStr='Zone '+G_zone;
     var vacs=(data.results||[])
-      .filter(function(r){var z=(r.zones||'')+(r.location||'');return z.indexOf(zStr)>=0;})
+      .filter(function(r){
+        var z=(r.zones||'');
+        var l=(r.location||'');
+        // Inclure la zone sélectionnée + les vacances communes à toutes les zones (été, Noël…)
+        return z.indexOf('Zone '+G_zone)>=0
+          || l.indexOf('Zone '+G_zone)>=0
+          || (z.indexOf('Zone A')>=0 && z.indexOf('Zone B')>=0 && z.indexOf('Zone C')>=0)
+          || z==='' || z.toLowerCase().indexOf('france')>=0;
+      })
       .map(function(r){return{name:r.description||'Vacances',start:(r.start_date||'').slice(0,10),end:(r.end_date||'').slice(0,10)};})
       .filter(function(v){return v.start&&v.end;});
+    // Dédoublonner les périodes identiques (dates communes listées plusieurs fois)
+    var seen={};
+    var vacs=vacs.filter(function(v){var k=v.start+'|'+v.end;if(seen[k])return false;seen[k]=true;return true;});
     G_vacances=vacs;
     try{localStorage.setItem(cacheKey,JSON.stringify(vacs));localStorage.setItem(cacheKey+'_ts',String(Date.now()));}catch(e){}
     renderCal();
