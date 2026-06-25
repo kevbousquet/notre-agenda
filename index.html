@@ -538,7 +538,15 @@ html,body{overflow-x:hidden}
       <div class="mf"><label>Date fin <span style="font-size:.7rem;color:var(--muted)">(optionnel)</span></label><input type="date" id="edend"></div>
     </div>
     <div class="mrow">
-      <div class="mf"><label>Heure</label><input type="time" id="eh"></div>
+      <div class="mf">
+        <label>Heure <span style="font-size:.7rem;color:var(--muted)">(optionnel)</span></label>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <select id="eh-h" onchange="syncEhVal()" style="flex:1;width:auto;padding:.7rem .5rem;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.95rem;color:var(--dark);background:var(--cream);outline:none;cursor:pointer"></select>
+          <span style="color:var(--muted);font-weight:700;flex-shrink:0">:</span>
+          <select id="eh-m" onchange="syncEhVal()" style="flex:1;width:auto;padding:.7rem .5rem;border:1.5px solid var(--border);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:.95rem;color:var(--dark);background:var(--cream);outline:none;cursor:pointer"></select>
+        </div>
+        <input type="hidden" id="eh">
+      </div>
       <div class="mf"></div>
     </div>
     <div class="mf"><label>Catégorie</label>
@@ -1383,7 +1391,7 @@ function chMo(d){G.mo+=d;if(G.mo>11){G.mo=0;G.yr++;}if(G.mo<0){G.mo=11;G.yr--;}r
 // ── EVENTS ──
 function openM(id){
   document.getElementById(id).classList.add('on');
-  if(id==='mev')renderMembersSelect();
+  if(id==='mev'){renderMembersSelect();_buildTimeSelects();}
   if(id==='mmembers')renderMembersInModal();
   if(id==='msettings'){refreshPushStatus();renderZoneBtns();}
 }
@@ -1434,9 +1442,35 @@ function saveEv(){
   }
   saveLocal();closeM('mev');_resetEvModal();renderCal();selDate(d);
 }
+function _buildTimeSelects(){
+  var hSel=document.getElementById('eh-h');
+  var mSel=document.getElementById('eh-m');
+  if(hSel.options.length>1)return;
+  hSel.innerHTML='<option value="">— h —</option>';
+  for(var h=0;h<24;h++){var o=document.createElement('option');o.value=pad(h);o.textContent=pad(h)+'h';hSel.appendChild(o);}
+  mSel.innerHTML='<option value="">— mn —</option>';
+  for(var m=0;m<60;m+=5){var o2=document.createElement('option');o2.value=pad(m);o2.textContent=pad(m);mSel.appendChild(o2);}
+}
+function syncEhVal(){
+  var h=document.getElementById('eh-h').value;
+  var m=document.getElementById('eh-m').value||'00';
+  document.getElementById('eh').value=h?(h+':'+m):'';
+}
+function setEhVal(val){
+  _buildTimeSelects();
+  var hSel=document.getElementById('eh-h');
+  var mSel=document.getElementById('eh-m');
+  if(!val){hSel.value='';mSel.value='';document.getElementById('eh').value='';return;}
+  var parts=val.split(':');
+  hSel.value=pad(parseInt(parts[0]||'0'));
+  var rawMin=parseInt(parts[1]||'0');
+  var rounded=Math.round(rawMin/5)*5; if(rounded>=60)rounded=55;
+  mSel.value=pad(rounded);
+  document.getElementById('eh').value=hSel.value+':'+mSel.value;
+}
 function _resetEvModal(){
   document.getElementById('eid').value='';
-  document.getElementById('et').value='';document.getElementById('eh').value='';
+  document.getElementById('et').value='';setEhVal('');
   document.getElementById('edend').value='';
   document.getElementById('en').value='';document.getElementById('er').value='0';
   document.getElementById('emember').value='';
@@ -1450,7 +1484,7 @@ function editEv(id){
   document.getElementById('et').value=ev.title;
   document.getElementById('ed').value=ev.date;
   document.getElementById('edend').value=ev.dateEnd||'';
-  document.getElementById('eh').value=ev.time||'';
+  setEhVal(ev.time||'');
   document.getElementById('ec').value=ev.cat||'autre';
   document.getElementById('en').value=ev.note||'';
   document.getElementById('er').value=ev.reminder||'0';
