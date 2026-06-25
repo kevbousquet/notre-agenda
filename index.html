@@ -1396,6 +1396,21 @@ function saveEv(){
   if(!t||!d){alert('Titre et date obligatoires');return;}
   var reminder=document.getElementById('er').value;
   var existingId=document.getElementById('eid').value;
+  var memberVal=document.getElementById('emember').value||null;
+  if(memberVal){
+    var newStart=d, newEnd=dend||d;
+    var conflicts=G.events.filter(function(e){
+      if(e.id===existingId)return false;
+      if(e.member!==memberVal)return false;
+      var eStart=e.date, eEnd=e.dateEnd||e.date;
+      return newStart<=eEnd && eStart<=newEnd;
+    });
+    if(conflicts.length){
+      var memberName=getMemberName(memberVal);
+      var conflictTitles=conflicts.slice(0,2).map(function(e){return '"'+e.title+'"'+(e.date?' le '+fmtFR(e.date):'');}).join(', ');
+      if(!confirm('⚠️ Attention ! '+memberName+' est déjà occupé(e) ce jour-là :\n'+conflictTitles+(conflicts.length>2?' et '+(conflicts.length-2)+' autre(s)':'')+'.\n\nEnregistrer quand même ?'))return;
+    }
+  }
   if(existingId){
     var idx=G.events.findIndex(function(e){return e.id===existingId});
     if(idx>=0){
