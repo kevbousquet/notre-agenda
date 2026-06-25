@@ -1,4 +1,4 @@
-const CACHE = 'agenda-couple-v7';
+const CACHE = 'agenda-couple-v8';
 const BASE = '/notre-agenda';
 const ASSETS = [BASE+'/index.html', BASE+'/manifest.json', BASE+'/icons/icon-192.png', BASE+'/icons/icon-512.png'];
 
